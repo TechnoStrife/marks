@@ -1,0 +1,106 @@
+$menu-width: 300px
+$menu-flyout-width: 300px
+$sidenav-text-color: rgba(0, 0, 0, 0.87)
+//$sidenav-text-color: #414956
+$sidenav-flyout-text-color: #F0F0F0
+$sidenav-flyout-bg-color: #414956
+$content-bg-color: #F9F9F9
+
+main
+  background-color: $content-bg-color
+  padding-left: $menu-width
+
+.collapsible-header
+  outline: none
+
+.collapsible-body li a
+  padding-left: 48px !important
+
+.sidenav
+  color: $sidenav-text-color
+  overflow-y: visible
+  z-index: 500
+  li > a
+    padding: 0 16px
+
+  > li:not(:first-child)
+    font-size: 14px
+    font-weight: 500
+
+  > li.with-flyout
+    > a::after
+      font-family: 'Material Icons'
+      content: "keyboard_arrow_left"
+      color: $sidenav-text-color
+      font-size: 18px
+      position: absolute
+      right: 16px
+      transition: transform 200ms
+
+    .sidenav-flyout
+      position: fixed
+      overflow: hidden
+      left: $menu-width
+      top: 0
+      width: 0
+      transition: width 200ms ease-in-out
+      height: 100vh
+      background-color: $sidenav-flyout-bg-color
+      ul
+        width: $menu-flyout-width
+
+  > li.with-flyout.flyout-active
+    > a::after
+      transform: rotate(-180deg)
+    .sidenav-flyout
+      width: $menu-flyout-width
+
+
+.sidenav-flyout
+  color: $sidenav-flyout-text-color
+  > ul > li:first-child
+    text-align: center
+  li
+    display: list-item
+    .collapsible-header::after
+      font-family: 'Material Icons'
+      content: "keyboard_arrow_left"
+      color: $sidenav-flyout-text-color
+      font-size: 18px
+      position: absolute
+      right: 16px
+      transition: transform 200ms
+    .collapsible-body
+      background-color: #383838
+      li
+        padding-left: 32px
+        padding-right: 32px
+  li.active
+    .collapsible-header::after
+      transform: rotate(-90deg)
+
+#profile
+  padding-top: 15px
+  padding-bottom: 15px
+  width: 100%
+  background: url(/static/images/profile-background.png) no-repeat center center
+  background-size: cover
+  text-shadow: 1px 1px 1px #444
+
+  > #profile-icon
+    width: 86.5px
+    height: 64px
+    float: left
+
+  > #user
+    width: 213px
+    padding: 0 12px
+    float: left
+
+    > #user-name
+      height: 32px
+      font-size: 1.2em
+      line-height: 32px
+
+    > #user-post
+      height: 32px

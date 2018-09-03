@@ -1,0 +1,5 @@
+django
+django-livereload-server
+requests
+bs4
+lxml
