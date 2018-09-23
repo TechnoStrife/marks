@@ -19,13 +19,7 @@ def path_from_project_root(path: str):
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-
-DNEVNIK = {
-    'login': '***REMOVED***',
-    'pass': '***REMOVED***',
-    'school_id': ***REMOVED***
-}
-
+MAX_RUN_TIME = 2 * 60 * 60  # 2 hours
 
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 
@@ -40,6 +34,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'livereload',
+    'background_task',
     'django.contrib.staticfiles',
     'main',
     'frontend',
