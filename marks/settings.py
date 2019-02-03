@@ -21,6 +21,18 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 MAX_RUN_TIME = 2 * 60 * 60  # 2 hours
 
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 50
+}
+
+
 # See https://docs.djangoproject.com/en/1.11/howto/deployment/checklist/
 
 SECRET_KEY = 'y&5h#2ovxoyndpw8u@q4^-uc5gf(1623fx3f43u81yqi5z%%1x'
@@ -35,6 +47,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'livereload',
     'background_task',
+    'rest_framework',
     'django.contrib.staticfiles',
     'main',
     'frontend',
@@ -59,8 +72,7 @@ ROOT_URLCONF = 'marks.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')]
-        ,
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

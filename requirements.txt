@@ -4,3 +4,4 @@ django-background-tasks
 requests
 bs4
 lxml
+djangorestframework

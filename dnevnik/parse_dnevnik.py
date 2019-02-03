@@ -1,170 +1,108 @@
 import re
+import django
 import requests
+import datetime
 from bs4 import BeautifulSoup
-
-if __name__ == '__main__':
-    import os
-    import django
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'marks.settings')
-    django.setup()
-
-# import from any project file must go after django.setup()
+from urllib.parse import urlparse, parse_qs
 from dnevnik import dnevnik_settings
+
+django.setup()
 from main.models import *
-
-
-LOGIN = dnevnik_settings.LOGIN
-PASSWORD = dnevnik_settings.PASSWORD
-SCHOOL_ID = dnevnik_settings.SCHOOL_ID
-URLS = dnevnik_settings.URLS
-
-
-def transform_class_name(name):
-    if len(name) == 3:
-        return name
-    expr = re.match('^(\d{1,2})\s?\"([А-Я])\"', name)
-    if not expr:
-        return False
-    name = expr.group(1) + expr.group(2)
-    return name
-
-
-def skip_navigable_strings(soup):
-    # noinspection PyProtectedMember
-    from bs4 import NavigableString
-    for z in soup:
-        if type(z) is NavigableString:
-            continue
-        yield z
-
-
-def exclude_navigable_strings(soup):
-    # noinspection PyProtectedMember
-    from bs4 import NavigableString
-    return [x for x in soup if type(x) is not NavigableString]
+from dnevnik.support import *
 
 
 def login() -> requests.Session:
     session = requests.Session()
-    url = URLS['login']
     login_data = {
-        'login': LOGIN,
-        'password': PASSWORD
+        'login': dnevnik_settings.LOGIN,
+        'password': dnevnik_settings.PASSWORD
     }
-    r = session.post(url, data=login_data)
+    r = request_page(session, 'login', data=login_data)
 
-    if 'Ошибка в логине или пароле' in r.text:
+    if r.url == 'https://dnevnik.ru/teacher' or r.url == 'https://dnevnik.ru:443/teacher':  # after redirect
+        return session
+    elif 'Ошибка в логине или пароле' in r.text:
         raise ValueError('Ошибка в логине или пароле')
-    if r.status_code != 200:
+    elif r.status_code != 200:
         raise RuntimeError('Неизвестная ошибка при попытке авторизации')
-    return session
+    else:
+        raise RuntimeError('WTF how did it get here?')
 
 
-def scan_year(session: requests.Session, year):
-    url = URLS['year']
-    r = session.post(
-        url=url,
-        params={
-            'school': SCHOOL_ID,
-            'tab': 'groups',
-            'year': str(year)
-        },
-        headers={
-            'Referer': url
-        }
-    )
+def scan_classes_by_year(session: requests.Session, year):
+    r = request_page(session, 'year', params={
+        'school': dnevnik_settings.SCHOOL_ID,
+        'tab': 'groups',
+        'year': str(year)
+    })
     soup = BeautifulSoup(r.text, "lxml")
     classes = soup.find_all(title="Открыть журналы этого класса")
     res = []
     for klass in classes:
         res.append({
-            'name': klass.text.strip(),
-            'id': klass['href'][1:]
+            'id': klass['href'][1:],
+            'name': transform_class_name(klass.text.strip()),
         })
     return res
 
 
-def scan_class(session: requests.Session, class_id):
-    url = URLS['class']
-    r = session.post(
-        url=url,
-        params={
-            'class': str(class_id)
-        },
-        headers={
-            'Referer': url
-        }
-    )
-    if r.status_code != 200:
-        raise RuntimeError('Ошибка при попытке получить информацию о классе')
+def scan_class(session: requests.Session, name, class_id, year) -> Class:
+    def extract_head_teacher(head_teacher, session):
+        if not head_teacher:
+            return None
+        head_teacher = head_teacher.find(class_='first').find_all('a')[1]
+        if not head_teacher['href']:
+            raise RuntimeError
+        head_teacher_id = head_teacher['href'][len('https://dnevnik.ru/user/user.aspx?user='):].strip()
+
+        head_teacher = Teacher.objects.filter(dnevnik_id=head_teacher_id)
+        if head_teacher.exists():
+            head_teacher = head_teacher.first()
+        else:
+            head_teacher = scan_user(session, int(head_teacher_id), TEACHER)
+        return head_teacher
+
+    r = request_page(session, 'class', params={'class': str(class_id)})
+
+    klass = {
+        'name': name,
+        'year': year,
+        'dnevnik_id': class_id,
+    }
+
     soup = BeautifulSoup(r.text, "lxml")
     class_info = soup.find(class_='info').find('h2').text[len('Класс:'):].strip()
     if '(' in class_info:
-        name = class_info[:class_info.find('(')].strip()
-        info = class_info[class_info.find('(') + len('('):class_info.find(')')].strip()
+        final_class_name = class_info[:class_info.find('(')].strip()
+        klass['info'] = class_info[class_info.find('(') + len('('):class_info.find(')')].strip()
+        if final_class_name == klass['info']:
+            klass['info'] = None
     else:
-        name = class_info
-        info = None
+        final_class_name = class_info
+        klass['info'] = None
+    final_class_name = transform_class_name(final_class_name)
+    del class_info
 
-    head_teacher = soup.find(class_='peopleS').find(class_='first').find_all('a')[1]
-    if not head_teacher['href'].startswith('https://dnevnik.ru/user/user.aspx?user='):
-        raise RuntimeError
+    klass['head_teacher'] = extract_head_teacher(soup.find(class_='peopleS'), session)
 
-    return {
-        'name': name,
-        'info': info,
-        'head_teacher': {
-            'id': head_teacher['href'][len('https://dnevnik.ru/user/user.aspx?user='):].strip(),
-            'name': head_teacher.text.strip()
-        }
-    }
+    final_class_id = int(parse_qs(urlparse(r.url).query)['class'][0])
+    if final_class_id != class_id:
+        final_class = klass.copy()
+        final_class['name'] = final_class_name
+        final_class['dnevnik_id'] = final_class_id
+        del final_class_id, final_class_name
+        final_class['year'] += class_grade(final_class['name']) - class_grade(klass['name'])
+        final_class = get_or_create(Class, 'dnevnik_id', **final_class)
+        klass['final_class'] = final_class
+
+    return get_or_create(Class, 'dnevnik_id', **klass)
 
 
-def scan_user(session: requests.Session, user_id: int):
-    if type(user_id) is not int:
-        raise ValueError('user_id must be type int')
-
-    url = URLS['user']
-    r = session.post(
-        url=url,
-        params={
-            'user': str(user_id)
-        },
-        headers={
-            'Referer': url
-        }
-    )
-    if r.status_code == 404:
-        return False
-    if r.status_code != 200:
-        raise RuntimeError(r.status_code)
-    soup = BeautifulSoup(r.text, "lxml")
-    profile = soup.find(class_='profile')
-    if profile is None:
-        raise RuntimeError("dnevnik sucks. it's not showing user profile")
-
-    res = {}
-
-    name = profile.h2.a.text.strip()
-    res['name'] = name
-    del name
-
-    if profile.p and profile.p.text == 'Страница скрыта пользователем':
-        res['hidden_in_dnevnik'] = True
-        return res
-
-    birthday = profile.find(class_='birthdayTable').dd.text.replace('\xa0', ' ').strip()
-    if '(' in birthday:  # cut age like '19 октября 1992 (25 лет)' -> '19 октября 1992'
-        birthday = birthday[:birthday.find('(')].strip()
-    res['birthday'] = birthday
-    del birthday
-    del profile
-
-    contacts_soup = soup.find(class_='contacts')
-    if contacts_soup:
-        # Samples: https://dnevnik.ru/user/user.aspx?user=1000005849457
-        #          https://dnevnik.ru/user/user.aspx?user=1000007512420
-        #          https://dnevnik.ru/user/user.aspx?user=1000007381547
+def scan_user(session: requests.Session, user_id: int, user=STUDENT, klass=None):
+    def extract_contacts(contacts_soup):
+        if not contacts_soup:
+            return {}
+        # Samples: https://dnevnik.ru/user/user.aspx?user=1000005849457  1000007512420  1000007381547
         contacts = {}
         key = None
         for contact in skip_navigable_strings(contacts_soup):
@@ -185,30 +123,173 @@ def scan_user(session: requests.Session, user_id: int):
                     contacts[key] = contact.text
             else:
                 raise RuntimeError('error in user contacts. dnevnik sucks')
-        res.update(contacts)
-        del contacts
-    del contacts_soup
+        return contacts
 
-    return res
+    if type(user_id) is not int:
+        raise ValueError('user_id must be type int')
+    if user not in USER_TYPES:
+        raise RuntimeError("user must be '{}' or '{}'".format(STUDENT, TEACHER))
+
+    r = request_page(session, 'user', params={'user': str(user_id)})
+    soup = BeautifulSoup(r.text, "lxml")
+
+    profile = soup.find(class_='profile')
+
+    res = {
+        'dnevnik_id': user_id,
+        'name': profile.h2.a.text.strip()
+    }
+
+    if not profile.p or profile.p.text == 'Страница скрыта пользователем':
+        res['not_found_in_dnevnik'] = True
+    else:
+        birthday = profile.find(class_='birthdayTable').dd.text.replace('\xa0', ' ').strip()
+        if '(' in birthday:  # cut age like '19 октября 1992 (25 лет)' -> '19 октября 1992'
+            birthday = birthday[:birthday.find('(')].strip()
+        res['birthday'] = birthday
+        del birthday
+
+        res.update(extract_contacts(soup.find(class_='contacts')))
+    del profile
+
+    if user == STUDENT:
+        res['klass'] = klass
+        res['full_name'] = res.pop('name')
+        return update_or_create(Student, 'dnevnik_id', **res)
+    else:
+        return update_or_create(Teacher, 'dnevnik_id', **res)
 
 
 def scan_all_teachers(session: requests.Session):
-    pass
+    def scan_tr(tr):
+        children = exclude_navigable_strings(tr)
+
+        res = {
+            'full_name': children[1]['title'],
+            'birthday': children[3].text,
+            'email': children[7].text if children[7].text else None,
+        }
+        res['birthday'] = [int(x) for x in res['birthday'].split('.')]
+        res['birthday'] = datetime.date(*res['birthday'][::-1])
+        if children[6].text:
+            res['tel'] = str(children[6].contents[0])
+        else:
+            res['tel'] = None
+
+        if children[1].a:
+            res['dnevnik_id'] = int(children[1].a['href'][len('https://dnevnik.ru/user/user.aspx?user='):])
+        else:
+            res['hidden_in_dnevnik'] = True
+
+        return update_or_create(Teacher, 'dnevnik_id', **res)
+
+    r = request_page(session, 'all_teachers', params={'school': dnevnik_settings.SCHOOL_ID})
+    soup = BeautifulSoup(r.text, "lxml")
+
+    pager = soup.find(class_='pager')
+    last_page = exclude_navigable_strings(pager.ul.children)[-1]
+    last_page = last_page.a.text if last_page.a else last_page.b.text
+    last_page = int(last_page)
+    del pager
+
+    teachers = []
+
+    table = soup.find(class_='grid')
+    for tr in exclude_navigable_strings(table)[1:]:
+        teachers.append(scan_tr(tr))
+
+    for page in range(2, last_page + 1):
+        r = request_page(session, 'all_teachers', params={
+            'school': dnevnik_settings.SCHOOL_ID,
+            'page': page
+        })
+        soup = BeautifulSoup(r.text, "lxml")
+        table = soup.find(class_='grid')
+        for tr in exclude_navigable_strings(table)[1:]:
+            teachers.append(scan_tr(tr))
+    return teachers
+
+
+def scan_all_students(session: requests.Session):
+    def scan_tr(tr, tr2):
+        children = exclude_navigable_strings(tr)
+
+        res = {
+            'full_name': children[1]['title'],
+            'birthday': children[3].text,
+            'klass': int(children[4].a['href'][len('https://schools.dnevnik.ru/class.aspx?class='):]),
+        }
+        res['klass'] = Class.objects.get(dnevnik_id=res['klass'])
+        res['birthday'] = [int(x) for x in res['birthday'].split('.')]
+        res['birthday'] = datetime.date(*res['birthday'][::-1])
+
+        if children[1].a:
+            res['dnevnik_id'] = int(children[1].a['href'][len('https://dnevnik.ru/user/user.aspx?user='):])
+        else:
+            res['not_found_in_dnevnik'] = True
+
+        if children[5].text.strip() != '':
+            parents = children[5]['title']
+            if children[6].text.strip() != '':
+                parents += ': ' + children[6].text.strip()
+            if tr2 is not None:
+                tr2 = exclude_navigable_strings(tr2)
+                parents += '\n' + tr2[0]['title']
+                if tr2[1].text.strip() != '':
+                    parents += ': ' + tr2[1].text.strip()
+            res['parents'] = parents
+
+        return update_or_create(Student, 'full_name', **res)
+
+    def join_rows(table):
+        table = exclude_navigable_strings(table)[2:]
+        while table:
+            tr = table.pop(0)
+            tr2 = None
+            if 'rowspan' in tr.td.attrs:
+                tr2 = table.pop(0)
+            yield tr, tr2
+
+    r = request_page(session, 'all_students', params={'school': dnevnik_settings.SCHOOL_ID})
+    soup = BeautifulSoup(r.text, "lxml")
+
+    last_page = get_pages_count(soup)
+
+    students = []
+
+    table = soup.find(class_='grid')
+
+    for tr, tr2 in join_rows(table):
+        students.append(scan_tr(tr, tr2))
+
+    for page in range(2, last_page + 1):
+        r = request_page(session, 'all_students', params={
+            'school': dnevnik_settings.SCHOOL_ID,
+            'page': page
+        })
+        soup = BeautifulSoup(r.text, "lxml")
+        table = soup.find(class_='grid')
+        for tr, tr2 in join_rows(table):
+            students.append(scan_tr(tr, tr2))
+    return students
 
 
 def main():
     print('Logging')
     session = login()
-    print('Scanning classes')
 
-    scan_all_teachers(session)
-    # classes = scan_year(session, dnevnik_settings.current_year())
-    # for klass in classes:
-    #     class_info = scan_class(session, klass['id'])
-    #     klass.update(class_info)
-    #     teacher_info = scan_user(session, klass['head_teacher']['id'])
-    #     if teacher_info:
-    #         klass['head_teacher'].update(teacher_info)
+    # scan_all_teachers(session)
+    scan_all_students(session)
+    return
+
+    for year in range(dnevnik_settings.current_year(), dnevnik_settings.VERY_FIRST_YEAR - 1, -1):
+        classes = scan_classes_by_year(session, year)
+        for klass in classes:
+            klass = scan_class(session, klass['name'], klass['id'], year)
+            if klass.final_class is not None:
+                print('%s (%s) -> %s (%s)' % (klass.name, klass.year, klass.final_class.name, klass.final_class.year))
+            else:
+                print('%s (%s)' % (klass.name, klass.year))
 
 
 if __name__ == '__main__':

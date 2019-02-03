@@ -11,8 +11,12 @@ URLS = {
     'class': 'https://schools.dnevnik.ru/class.aspx',
     'user': 'https://dnevnik.ru/user/user.aspx',
     'get_subjects': 'https://schools.dnevnik.ru/ajax.ashx?xss={xss}&a=gsbgid',
-    'journal': 'https://schools.dnevnik.ru/journals/journalclassical.aspx'
+    'journal': 'https://schools.dnevnik.ru/journals/journalclassical.aspx',
+    'all_teachers': 'https://schools.dnevnik.ru/reports/default.aspx?report=people-staff',
+    'all_students': 'https://schools.dnevnik.ru/reports/default.aspx?report=people-students',
 }
+
+VERY_FIRST_YEAR = 2012
 
 
 def current_year():
