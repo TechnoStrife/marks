@@ -9,10 +9,8 @@ class TeacherAdmin(admin.ModelAdmin):
         'birthday',
         'tel',
         'email',
-        'not_found_in_dnevnik'
     ]
 
-    list_filter = ['not_found_in_dnevnik']
     search_fields = ['full_name']
 
     class Meta:

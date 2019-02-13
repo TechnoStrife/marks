@@ -128,7 +128,7 @@ def scan_all_teachers(session: Session):
     return teachers
 
 
-def scan_all_students(session: Session):
+def scan_students_by_year(session: Session):
     def scan_tr(tr, tr2):
         children = exclude_navigable_strings(tr)
 

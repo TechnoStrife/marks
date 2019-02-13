@@ -1,5 +1,5 @@
 from django.db.models import *
-from dnevnik import dnevnik_settings
+from main.base_model import MyModel as Model
 
 
 __all__ = [
@@ -28,11 +28,11 @@ class Quarter(Model):
 
 class Teacher(Model):
     full_name = CharField(max_length=127, verbose_name='ФИО')
+    job = CharField(max_length=128, verbose_name='Должность', null=True)
     birthday = DateField(verbose_name='День рождения', null=True)
     tel = CharField(max_length=15, verbose_name='Телефон', null=True)
     email = EmailField(verbose_name='Email', null=True)
     dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True, null=True)
-    not_found_in_dnevnik = BooleanField(verbose_name='Профиль скрыт в dnevnik.ru', default=False)
 
     @property
     def name(self):
@@ -136,7 +136,7 @@ class Subject(Model):
 
 class Student(Model):
     full_name = CharField(max_length=255, verbose_name='Имя')
-    info = CharField(max_length=4096, verbose_name='Примечания', default='')
+    info = CharField(max_length=4096, verbose_name='Примечания', null=True)
 
     klass = ForeignKey(Class, verbose_name='Класс', on_delete=CASCADE)
     previous_classes = ManyToManyField(Class, db_table='students_previous_classes', verbose_name='Предыдущие классы', related_name='+')
@@ -150,7 +150,6 @@ class Student(Model):
     parents = CharField(max_length=1024, verbose_name='Родители', default='')
 
     dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True, null=True)
-    not_found_in_dnevnik = BooleanField(verbose_name='Профиль не найден в dnevnik.ru', default=False)
 
     @property
     def name(self):
