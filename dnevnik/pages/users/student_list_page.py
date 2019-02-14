@@ -1,4 +1,9 @@
+import itertools
+from typing import Tuple, Union, List
 
+from bs4 import BeautifulSoup
+
+from dnevnik.fetch_queue import FetchQueueProcessor
 from dnevnik.pages.users.user_list_page import UserListPage
 from dnevnik.parsers.support import exclude_navigable_strings
 from main.models import Class, Student
@@ -7,19 +12,28 @@ __all__ = ['StudentListPage']
 
 
 class StudentListPage(UserListPage):
-    URL = 'https://schools.dnevnik.ru/reports/default.aspx?report=people-students'
+    URL: str = 'https://schools.dnevnik.ru/reports/default.aspx?report=people-students'
 
     def __init__(self, page=1):
         super().__init__(page=page)
-        self.students = []
+        self.students: List[Student] = []
+
+    def __str__(self):
+        if self.parsed:
+            return f"<StudentListPage page={self.params['page']}>"
+        else:
+            return f"<StudentListPage page={self.params['page']}, parsed={len(self.students)}>"
+
+    __repr__ = __str__
 
     def parse(self):
         super().parse()
         for tr, tr2 in self.join_rows():
             self.scan_tr(tr, tr2)
+        self.parsed = True
         return self
 
-    def join_rows(self):
+    def join_rows(self) -> Tuple[BeautifulSoup, Union[BeautifulSoup, None]]:
         table = exclude_navigable_strings(self.table)[2:]
         while table:
             tr = table.pop(0)
@@ -29,7 +43,7 @@ class StudentListPage(UserListPage):
             yield tr, tr2
 
     @staticmethod
-    def extract_parents(tr, tr2):
+    def extract_parents(tr: BeautifulSoup, tr2: BeautifulSoup) -> str:
         parents = ''
         if tr[5].text.strip() != '':
             parents = tr[5]['title']
@@ -42,7 +56,7 @@ class StudentListPage(UserListPage):
                     parents += ': ' + tr2[1].text.strip()
         return parents
 
-    def scan_tr(self, tr, tr2):
+    def scan_tr(self, tr: BeautifulSoup, tr2: BeautifulSoup):
         tr = exclude_navigable_strings(tr)
         offset = len('https://schools.dnevnik.ru/class.aspx?class=')
         klass_id = int(tr[4].a['href'][offset:])
@@ -64,11 +78,11 @@ class StudentListPage(UserListPage):
         self.students.append(student)
 
     @staticmethod
-    def scan_all_pages(session):
+    def scan_all_pages(fetch_queue: FetchQueueProcessor) -> List[Student]:
         print('students', 1)
-        page1 = StudentListPage().fetch(session).parse()
-        students = page1.students
-        for page in range(2, page1.last_page + 1):
-            print('students', page)
-            students.extend(StudentListPage(page=page).fetch(session).parse().students)
+        page1 = StudentListPage().fetch(fetch_queue.session).parse()
+        pages = [StudentListPage(page=page) for page in range(2, page1.last_page + 1)]
+        fetch_queue.process(pages)
+        students = [page1.students] + [page.students for page in pages]
+        students = list(itertools.chain.from_iterable(students))
         return students

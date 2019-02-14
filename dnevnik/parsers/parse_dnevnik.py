@@ -1,46 +1,45 @@
+from time import time
 import django
+
 django.setup()
 
 from dnevnik.parsers.support import login
 from dnevnik.pages import *
+from dnevnik.fetch_queue import FetchQueueProcessor
 
 from main.models import *
 
 
-def delete_all():
+def main():
     Class.objects.all().delete()
     Teacher.objects.all().delete()
     Student.objects.all().delete()
 
-
-def main():
-    delete_all()
+    t = time()
     print('Logging in')
     session = login()
+    fetch_queue = FetchQueueProcessor(session)
+    fetch_queue.start()
 
-    teachers = TeacherListPage.scan_all_pages(session)
+    teachers = TeacherListPage.scan_all_pages(fetch_queue)
     Teacher.objects.bulk_create(teachers)
+    del teachers
 
     classes = YearPage.scan_all_years(session)
 
-    for z, klass in enumerate(classes):
-        class_page = ClassPage(name=klass.name, class_id=klass.dnevnik_id, year=klass.year)
-        class_page.fetch(session).parse()
-        klass = class_page.klass
-        classes[z] = klass
-        if klass.final_class is not None:
-            print('%s (%s) -> %s (%s)' % (klass.name, klass.year, klass.final_class.name, klass.final_class.year))
-        else:
-            print('%s (%s)' % (klass.name, klass.year))
-
-    not_saved_teachers = [klass.head_teacher for klass in classes if klass.head_teacher]
-    not_saved_teachers = [klass.head_teacher for klass in classes if klass.head_teacher.pk is None]
-    Teacher.objects.bulk_create()
+    classes = ClassPage.scan_all_classes(classes, fetch_queue)
+    Teacher.objects.bulk_create(
+        [klass.head_teacher for klass in classes
+            if klass.head_teacher and klass.head_teacher.pk is None]
+    )
     Class.objects.bulk_create(classes)
+    del classes
 
-    students = StudentListPage.scan_all_pages(session)
+    students = StudentListPage.scan_all_pages(fetch_queue)
     Student.objects.bulk_create(students)
-    quit()
+    del students
+    fetch_queue.stop()
+    print(time() - t)
 
 
 if __name__ == '__main__':

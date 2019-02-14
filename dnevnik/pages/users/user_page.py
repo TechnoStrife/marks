@@ -1,3 +1,7 @@
+import datetime
+
+from bs4 import BeautifulSoup
+
 from dnevnik.pages.base_page import BasePage
 from dnevnik.parsers.support import skip_navigable_strings
 
@@ -5,23 +9,22 @@ __all__ = ['UserPage']
 
 
 class UserPage(BasePage):
-    URL = 'https://dnevnik.ru/user/user.aspx'
+    URL: int = 'https://dnevnik.ru/user/user.aspx'
 
-    def __init__(self, user_id):
-        super().__init__(params={user_id: user_id})
-        self.user_id = user_id
-        self.name = None
-        self.birthday = None
-        self.not_found_in_dnevnik = False
-        self.contacts = {}
-        self.email = None
-        self.tel = None
-        self.profile_soup = None
+    def __init__(self, user_id: int):
+        super().__init__(params={'user': user_id})
+        if type(user_id) is not int:
+            raise ValueError('user_id must be type int')
+        self.user_id: int = user_id
+        self.name: str = None
+        self.birthday: datetime.date = None
+        self.not_found_in_dnevnik: bool = False
+        self.contacts: dict = {}
+        self.email: str = None
+        self.tel: str = None
+        self.profile_soup: BeautifulSoup = None
 
     def parse(self):
-        if type(self.user_id) is not int:
-            raise ValueError('user_id must be type int')
-
         self.extract_profile()
         return self
 
@@ -53,9 +56,9 @@ class UserPage(BasePage):
 
     def extract_profile(self):
         self.profile_soup = self.soup.find(class_='profile')
-        self.name = self.profile_soup.h2.a.text.strip()
+        self.name = self.profile_soup.h2.get_text().strip()
 
-        if not self.profile_soup.p or self.profile_soup.p.text == 'Страница скрыта пользователем':
+        if self.profile_soup.p and 'Страница скрыта пользователем' in self.profile_soup.p.text:
             self.not_found_in_dnevnik = True
             return
 

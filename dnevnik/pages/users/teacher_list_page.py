@@ -1,5 +1,9 @@
-import datetime
+import itertools
+from typing import List
 
+from bs4 import BeautifulSoup
+
+from dnevnik.fetch_queue import FetchQueueProcessor
 from dnevnik.pages.users.user_list_page import UserListPage
 from dnevnik.parsers.support import exclude_navigable_strings
 from main.models import Teacher
@@ -8,19 +12,28 @@ __all__ = ['TeacherListPage']
 
 
 class TeacherListPage(UserListPage):
-    URL = 'https://schools.dnevnik.ru/reports/default.aspx?report=people-staff'
+    URL: str = 'https://schools.dnevnik.ru/reports/default.aspx?report=people-staff'
 
-    def __init__(self, page=1):
+    def __init__(self, page: int = 1):
         super().__init__(page)
-        self.teachers = []
+        self.teachers: List[Teacher] = []
+
+    def __str__(self):
+        if self.parsed:
+            return f"<StudentListPage page={self.params['page']}, parsed={len(self.teachers)}>"
+        else:
+            return f"<StudentListPage page={self.params['page']}>"
+
+    __repr__ = __str__
 
     def parse(self):
         super().parse()
         for tr in self.table[1:]:
             self.scan_tr(tr)
+        self.parsed = True
         return self
 
-    def scan_tr(self, tr):
+    def scan_tr(self, tr: BeautifulSoup):
         children = exclude_navigable_strings(tr)
 
         dnevnik_id = None
@@ -39,11 +52,11 @@ class TeacherListPage(UserListPage):
         self.teachers.append(teacher)
 
     @staticmethod
-    def scan_all_pages(session):
+    def scan_all_pages(fetch_queue: FetchQueueProcessor) -> List[Teacher]:
         print('teachers', 1)
-        page1 = TeacherListPage().fetch(session).parse()
-        teachers = page1.teachers
-        for page in range(2, page1.last_page + 1):
-            print('teachers', page)
-            teachers.extend(TeacherListPage(page=page).fetch(session).parse().teachers)
+        page1 = TeacherListPage().fetch(fetch_queue.session).parse()
+        pages = [TeacherListPage(page=page) for page in range(2, page1.last_page + 1)]
+        fetch_queue.process(pages)
+        teachers = [page1.teachers] + [page.teachers for page in pages]
+        teachers = list(itertools.chain.from_iterable(teachers))
         return teachers

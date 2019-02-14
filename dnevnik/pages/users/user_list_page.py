@@ -1,5 +1,7 @@
 import datetime
 
+from bs4 import BeautifulSoup
+
 from dnevnik import dnevnik_settings
 from dnevnik.pages.base_page import BasePage
 from dnevnik.parsers.support import exclude_navigable_strings
@@ -13,8 +15,8 @@ class UserListPage(BasePage):
             'school': dnevnik_settings.SCHOOL_ID,
             'page': page
         })
-        self.last_page = None
-        self.table = None
+        self.last_page: int = None
+        self.table: BeautifulSoup = None
 
     def extract_pages_count(self):
         pager = self.soup.find(class_='pager')
