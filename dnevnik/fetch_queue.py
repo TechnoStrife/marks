@@ -47,7 +47,7 @@ class PageFetcher(Thread):
 
 
 class FetchQueueProcessor:
-    def __init__(self, session: Session, max_requests: int = 20):
+    def __init__(self, session: Session, max_requests: int = 10):
         self.session: Session = session
         self.max_requests: int = max_requests
         self.queue: TypeQueue[BasePage] = Queue()

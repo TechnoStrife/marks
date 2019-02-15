@@ -3,7 +3,7 @@ import django
 
 django.setup()
 
-from dnevnik.parsers.support import login
+from dnevnik.support import login
 from dnevnik.pages import *
 from dnevnik.fetch_queue import FetchQueueProcessor
 
@@ -25,7 +25,7 @@ def main():
     Teacher.objects.bulk_create(teachers)
     del teachers
 
-    classes = YearPage.scan_all_years(session)
+    classes = ClassesListPage.scan_all_years(session)
 
     classes = ClassPage.scan_all_classes(classes, fetch_queue)
     Teacher.objects.bulk_create(

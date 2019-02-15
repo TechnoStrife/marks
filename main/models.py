@@ -3,7 +3,7 @@ from main.base_model import MyModel as Model
 
 
 __all__ = [
-    'Quarter',
+    'Period',
     'Student',
     'Teacher',
     'Class',
@@ -13,7 +13,7 @@ __all__ = [
 ]
 
 
-class Quarter(Model):
+class Period(Model):
     num = CharField(max_length=1, verbose_name='Четверть')
     year = SmallIntegerField(verbose_name='Уч. год')
     dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True)
@@ -83,7 +83,7 @@ class Class(Model):
     head_teacher = ForeignKey(Teacher, on_delete=CASCADE, verbose_name='Классный руководитель', null=True)
     year = SmallIntegerField(verbose_name='Уч. год')
     dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True)
-    # is_final = BooleanField(verbose_name='dnevnik.ru мразь', default=False)
+    preiods_count = SmallIntegerField(verbose_name='Количество учебных периодов', null=True)
     final_class = ForeignKey('self', verbose_name='Конечный класс', on_delete=SET_NULL, null=True)
 
     def __str__(self):
@@ -219,7 +219,7 @@ class Mark(Model):
     presence = SmallIntegerField(verbose_name='Присутствие', choices=PRESENSE_CHOICES)
     student = ForeignKey(Student, verbose_name='Ученик', on_delete=CASCADE)
     lesson_info = ForeignKey(Lesson, verbose_name='Урок', on_delete=CASCADE)
-    quarter = ForeignKey(Quarter, verbose_name='Четверть', on_delete=CASCADE)
+    quarter = ForeignKey(Period, verbose_name='Четверть', on_delete=CASCADE)
     date = DateField(null=True, verbose_name='Дата')
     is_semester = BooleanField(default=False, verbose_name='Четвертная')
     is_terminal = BooleanField(default=False, verbose_name='Годовая')

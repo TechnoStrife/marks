@@ -1,3 +1,3 @@
 from .users import *
-from .year_page import YearPage
+from .class_list_page import ClassesListPage
 from .klass_page import ClassPage
