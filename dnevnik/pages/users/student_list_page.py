@@ -1,11 +1,10 @@
-import itertools
 from typing import Tuple, Union, List
 
 from bs4 import BeautifulSoup
 
 from dnevnik.fetch_queue import FetchQueueProcessor
 from dnevnik.pages.users.user_list_page import UserListPage
-from dnevnik.parsers.support import exclude_navigable_strings
+from dnevnik.support import exclude_navigable_strings, flat_2d
 from main.models import Class, Student
 
 __all__ = ['StudentListPage']
@@ -78,11 +77,12 @@ class StudentListPage(UserListPage):
         self.students.append(student)
 
     @staticmethod
-    def scan_all_pages(fetch_queue: FetchQueueProcessor) -> List[Student]:
+    def scan_all_pages(fetch_queue: FetchQueueProcessor, save: bool = False) -> List[Student]:
         print('students', 1)
         page1 = StudentListPage().fetch(fetch_queue.session).parse()
         pages = [StudentListPage(page=page) for page in range(2, page1.last_page + 1)]
         fetch_queue.process(pages)
-        students = [page1.students] + [page.students for page in pages]
-        students = list(itertools.chain.from_iterable(students))
+        students = flat_2d([page1.students] + [page.students for page in pages])
+        if save:
+            Student.objects.bulk_create(students)
         return students

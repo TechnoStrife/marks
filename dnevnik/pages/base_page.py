@@ -1,9 +1,15 @@
-from typing import Union
+from enum import Enum, auto
+from typing import Union, Dict, Any
 
 from bs4 import BeautifulSoup
 from requests import Session, Response
 
-from dnevnik.parsers.support import request_page
+from dnevnik.support import request_page
+
+
+class ResponseType(Enum):
+    HTML = auto()
+    JSON = auto()
 
 
 class BasePage:
@@ -11,8 +17,10 @@ class BasePage:
     response: Response = None
     post: bool = False
     soup: BeautifulSoup = None
+    json: Dict[str, Any]
     fetched: bool = False
     parsed: bool = False
+    response_type: ResponseType = ResponseType.HTML
 
     def __init__(self, params: Union[None, dict] = None, data: Union[None, dict] = None):
         self.params = params
@@ -20,7 +28,10 @@ class BasePage:
 
     def fetch(self, session: Session) -> 'BasePage':
         self.response = request_page(session, self.URL, self.params, self.data)
-        self.soup = BeautifulSoup(self.response.text, "lxml")
+        if self.response_type is ResponseType.HTML:
+            self.soup = BeautifulSoup(self.response.text, "lxml")
+        elif self.response_type is ResponseType.JSON:
+            self.json = self.response.json()
         self.fetched = True
         return self
 

@@ -1,8 +1,8 @@
 import re
 from typing import List, Union
 
-from dnevnik import dnevnik_settings
-from dnevnik.pages.klass_page import transform_class_name
+from dnevnik import settings
+from dnevnik.support import transform_class_name
 from main.models import Class
 from .base_page import BasePage
 
@@ -14,7 +14,7 @@ class ClassesListPage(BasePage):
 
     def __init__(self, year: int):
         super().__init__(params={
-            'school': dnevnik_settings.SCHOOL_ID,
+            'school': settings.SCHOOL_ID,
             'tab': 'groups',
             'year': str(year)
         })
@@ -39,7 +39,7 @@ class ClassesListPage(BasePage):
                 dnevnik_id=int(klass['href'][1:]),
             ))
         self.parsed = True
-        self.xss_token = self.parse_xss()
+        # self.xss_token = self.parse_xss()
         return self
 
     def parse_xss(self) -> str:
@@ -49,13 +49,11 @@ class ClassesListPage(BasePage):
 
     @staticmethod
     def scan_all_years(session) -> List[Class]:
-        year = dnevnik_settings.current_year()
+        year = settings.current_year()
         classes = []
-        xss = None
         while True:
             print('years', year)
             page = ClassesListPage(year=year).fetch(session).parse()
-            xss = page.xss_token
             classes.extend(page.classes)
             if page.previous_year:
                 year -= 1

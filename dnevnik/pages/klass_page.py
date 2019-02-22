@@ -1,28 +1,14 @@
 import copy
-import re
 from typing import Union, List
 from urllib.parse import parse_qs, urlparse
 
 from dnevnik.fetch_queue import FetchQueueProcessor
-from dnevnik.pages import TeacherPage
+from dnevnik.pages import TeacherPage, ClassesListPage
+from dnevnik.support import transform_class_name, class_grade
 from main.models import Teacher, Class
 from .base_page import BasePage
 
-__all__ = ['ClassPage', 'transform_class_name', 'class_grade']
-
-
-def transform_class_name(name: str) -> str:  # '10 "А"' -> '10А'
-    if len(name) == 3:
-        return name
-    expr = re.match('^(\\d{1,2})\\s?\"([А-Я])\"', name)
-    name = expr.group(1) + expr.group(2)
-    return name
-
-
-def class_grade(name: str) -> int:  # '10А' -> 10
-    if name[1].isdigit():
-        return int(name[:2])
-    return int(name[0])
+__all__ = ['ClassPage']
 
 
 class ClassPage(BasePage):
@@ -82,7 +68,9 @@ class ClassPage(BasePage):
             self.head_teacher_parsed = True
 
     @staticmethod
-    def scan_all_classes(classes: List[Class], fetch_queue: FetchQueueProcessor) -> List[Class]:
+    def scan_all_classes(fetch_queue: FetchQueueProcessor, save: bool = False) -> List[Class]:
+        classes = ClassesListPage.scan_all_years(fetch_queue.session)
+
         pages = [ClassPage(name=klass.name, class_id=klass.dnevnik_id, year=klass.year)
                  for klass in classes]
         fetch_queue.process(pages)
@@ -101,4 +89,11 @@ class ClassPage(BasePage):
                     continue
                 page.klass.head_teacher = head_teachers[page.head_teacher_id]
         classes = [page.klass for page in pages]
+        if save:
+            Teacher.objects.bulk_create(
+                [klass.head_teacher for klass in classes
+                 if klass.head_teacher and klass.head_teacher.pk is None]
+            )
+            Class.objects.bulk_create(classes)
+
         return classes

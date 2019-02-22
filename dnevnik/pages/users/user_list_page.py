@@ -2,9 +2,9 @@ import datetime
 
 from bs4 import BeautifulSoup
 
-from dnevnik import dnevnik_settings
+from dnevnik import settings
 from dnevnik.pages.base_page import BasePage
-from dnevnik.parsers.support import exclude_navigable_strings
+from dnevnik.support import exclude_navigable_strings
 
 __all__ = ['UserListPage']
 
@@ -12,7 +12,7 @@ __all__ = ['UserListPage']
 class UserListPage(BasePage):
     def __init__(self, page):
         super().__init__(params={
-            'school': dnevnik_settings.SCHOOL_ID,
+            'school': settings.SCHOOL_ID,
             'page': page
         })
         self.last_page: int = None

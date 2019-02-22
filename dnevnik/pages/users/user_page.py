@@ -3,7 +3,7 @@ import datetime
 from bs4 import BeautifulSoup
 
 from dnevnik.pages.base_page import BasePage
-from dnevnik.parsers.support import skip_navigable_strings
+from dnevnik.support import skip_navigable_strings
 
 __all__ = ['UserPage']
 

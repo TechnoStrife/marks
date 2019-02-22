@@ -1,24 +1,32 @@
+import itertools
 import re
+from typing import List, Any, Union, Iterator, TypeVar, Callable
 
 from bs4.element import NavigableString
 from requests import Session
 
-from dnevnik import dnevnik_settings
-from dnevnik.dnevnik_settings import CHROME_USER_AGENT
+from dnevnik import settings
+from dnevnik.settings import CHROME_USER_AGENT
 
 __all__ = [
     'skip_navigable_strings',
     'exclude_navigable_strings',
     'login',
     'request_page',
+    'flat_2d',
+    'transform_class_name',
+    'class_grade',
+    'unique'
 ]
+
+T = TypeVar('T')
 
 
 def login() -> Session:
     session = Session()
     login_data = {
-        'login': dnevnik_settings.LOGIN,
-        'password': dnevnik_settings.PASSWORD
+        'login': settings.LOGIN,
+        'password': settings.PASSWORD
     }
     r = request_page(session, 'https://login.dnevnik.ru/', data=login_data)
 
@@ -63,3 +71,41 @@ def exclude_navigable_strings(soup):
     # noinspection PyProtectedMember
     from bs4 import NavigableString
     return [x for x in soup if type(x) is not NavigableString]
+
+
+def flat_2d(arr: Union[List[List[T]], Iterator[List[T]]]) -> List[T]:
+    return list(itertools.chain.from_iterable(arr))
+
+
+def transform_class_name(name: str) -> str:
+    """
+    >>> transform_class_name('10 "А"')
+    '10А'
+    """
+    if len(name) == 3:
+        return name
+    expr = re.match('^(\\d{1,2})\\s?\"([А-Я])\"', name)
+    name = expr.group(1) + expr.group(2)
+    return name
+
+
+def class_grade(name: str) -> int:
+    """
+    >>> class_grade('10А')
+    10
+    """
+    if name[1].isdigit():
+        return int(name[:2])
+    return int(name[0])
+
+
+def unique(sequence: Union[List[T], Iterator[T]], key: Callable[[T], Any] = lambda x: x) -> List[T]:
+    seen = {}
+    result = []
+    for item in sequence:
+        marker = key(item)
+        if marker in seen:
+            continue
+        seen[marker] = 1
+        result.append(item)
+    return result

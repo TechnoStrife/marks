@@ -1,6 +1,6 @@
 from django.db.models import *
-from main.base_model import MyModel as Model
 
+from main.base_model import MyModel as Model
 
 __all__ = [
     'Period',
@@ -14,7 +14,7 @@ __all__ = [
 
 
 class Period(Model):
-    num = CharField(max_length=1, verbose_name='Четверть')
+    num = SmallIntegerField(verbose_name='Четверть')
     year = SmallIntegerField(verbose_name='Уч. год')
     dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True)
 
@@ -85,6 +85,7 @@ class Class(Model):
     dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True)
     preiods_count = SmallIntegerField(verbose_name='Количество учебных периодов', null=True)
     final_class = ForeignKey('self', verbose_name='Конечный класс', on_delete=SET_NULL, null=True)
+    periods = ManyToManyField(Period, db_table='class_periods', verbose_name='Семестры', related_name='+')
 
     def __str__(self):
         return self.name + ' класс'
@@ -139,7 +140,8 @@ class Student(Model):
     info = CharField(max_length=4096, verbose_name='Примечания', null=True)
 
     klass = ForeignKey(Class, verbose_name='Класс', on_delete=CASCADE)
-    previous_classes = ManyToManyField(Class, db_table='students_previous_classes', verbose_name='Предыдущие классы', related_name='+')
+    previous_classes = ManyToManyField(Class, db_table='students_previous_classes',
+                                       verbose_name='Предыдущие классы', related_name='+')
 
     first_mark = ForeignKey('Mark', on_delete=PROTECT, verbose_name='Первая оценка', null=True, related_name='+')
     last_mark = ForeignKey('Mark', on_delete=PROTECT, verbose_name='Последняя оценка', null=True, related_name='+')
@@ -191,7 +193,7 @@ class Student(Model):
 class Lesson(Model):
     klass = ForeignKey(Class, verbose_name='Класс', on_delete=CASCADE)
     subject = ForeignKey(Subject, verbose_name='Предмет', on_delete=CASCADE)
-    teacher = ForeignKey(Teacher, verbose_name='Учитель', on_delete=CASCADE)
+    teacher = ForeignKey(Teacher, verbose_name='Учитель', on_delete=CASCADE, null=True)
 
     @property
     def name(self):
