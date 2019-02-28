@@ -63,6 +63,12 @@ class Teacher(Model):
         surname, name, patronymic = self.full_name.split()
         return surname
 
+    def check_name(self, check: str):
+        check = check.split()
+        if len(check) != 3:
+            return False
+        return all(name in check for name in self.full_name.split())
+
     def dnevnik_link(self):
         if self.dnevnik_id:
             return 'https://dnevnik.ru/user/user.aspx?user=' + str(self.dnevnik_id)
@@ -152,6 +158,7 @@ class Student(Model):
     parents = CharField(max_length=1024, verbose_name='Родители', default='')
 
     dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True, null=True)
+    dnevnik_student_id = BigIntegerField(verbose_name='ID ученика в dnevnik.ru', unique=True, null=True)
 
     @property
     def name(self):
@@ -211,25 +218,28 @@ class Lesson(Model):
 
 
 class Mark(Model):
+    PRESENT = 0
+    ABSENT = 1
+
     PRESENSE_CHOICES = (
-        (0, 'Присутствовал'),
-        (1, 'Отсутствовал'),
-        (2, 'Опоздал')
+        (PRESENT, 'Присутствовал'),
+        (ABSENT, 'Отсутствовал'),
+        # (2, 'Опоздал')
     )
 
-    mark = IntegerField(verbose_name='Оценка')
-    presence = SmallIntegerField(verbose_name='Присутствие', choices=PRESENSE_CHOICES)
+    mark = SmallIntegerField(verbose_name='Оценка', null=True)
+    presence = SmallIntegerField(verbose_name='Присутствие', choices=PRESENSE_CHOICES, default=PRESENT)
     student = ForeignKey(Student, verbose_name='Ученик', on_delete=CASCADE)
     lesson_info = ForeignKey(Lesson, verbose_name='Урок', on_delete=CASCADE)
-    quarter = ForeignKey(Period, verbose_name='Четверть', on_delete=CASCADE)
+    period = ForeignKey(Period, verbose_name='Четверть', on_delete=CASCADE)
     date = DateField(null=True, verbose_name='Дата')
     is_semester = BooleanField(default=False, verbose_name='Четвертная')
     is_terminal = BooleanField(default=False, verbose_name='Годовая')
 
     def __str__(self):
-        # if self.mark == self.ABSENT:
+        if self.presence == self.ABSENT:
             # TODO изменение по роду "не было"
-            # return '%s не было на %s в %s' % (self.student, self.lesson_info.subject.name.lower(), self.date)
+            return '%s не было на %s в %s' % (self.student, self.lesson_info.subject.name.lower(), self.date)
 
         # TODO склонение предметов
         if self.is_semester:

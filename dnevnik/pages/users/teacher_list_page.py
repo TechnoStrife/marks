@@ -1,7 +1,7 @@
 from typing import List
 
 from bs4 import BeautifulSoup
-from dnevnik.support import exclude_navigable_strings
+from dnevnik.support import exclude_navigable_strings, get_query_params
 
 from dnevnik.fetch_queue import FetchQueueProcessor
 from dnevnik.pages.users.user_list_page import UserListPage
@@ -38,8 +38,7 @@ class TeacherListPage(UserListPage):
 
         dnevnik_id = None
         if children[1].a:
-            offset = len('https://dnevnik.ru/user/user.aspx?user=')
-            dnevnik_id = int(children[1].a['href'][offset:])
+            dnevnik_id = int(get_query_params(children[1].a['href'], 'user'))
 
         teacher = Teacher(
             full_name=children[1]['title'],

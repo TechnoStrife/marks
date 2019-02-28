@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 
 from dnevnik.fetch_queue import FetchQueueProcessor
 from dnevnik.pages.users.user_list_page import UserListPage
-from dnevnik.support import exclude_navigable_strings, flat_2d
+from dnevnik.support import exclude_navigable_strings, flat_2d, get_query_params
 from main.models import Class, Student
 
 __all__ = ['StudentListPage']
@@ -62,8 +62,7 @@ class StudentListPage(UserListPage):
 
         dnevnik_id = None
         if tr[1].a:
-            offset = len('https://dnevnik.ru/user/user.aspx?user=')
-            dnevnik_id = int(tr[1].a['href'][offset:])
+            dnevnik_id = int(get_query_params(tr[1].a['href'], 'user'))
 
         student = Student(
             full_name=tr[1]['title'],

@@ -5,17 +5,6 @@ LOGIN = '***REMOVED***'
 PASSWORD = '***REMOVED***'
 SCHOOL_ID = ***REMOVED***
 
-URLS = {
-    'login': 'https://login.dnevnik.ru/',
-    'year': 'https://schools.dnevnik.ru/journals/',
-    'class': 'https://schools.dnevnik.ru/class.aspx',
-    'user': 'https://dnevnik.ru/user/user.aspx',
-    'get_subjects': 'https://schools.dnevnik.ru/ajax.ashx?xss={xss}&a=gsbgid',
-    'journal': 'https://schools.dnevnik.ru/journals/journalclassical.aspx',
-    'all_teachers': 'https://schools.dnevnik.ru/reports/default.aspx?report=people-staff',
-    'all_students': 'https://schools.dnevnik.ru/reports/default.aspx?report=people-students',
-}
-
 CHROME_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ' \
                     'Chrome/69.0.3497.100 Safari/537.36 '
 

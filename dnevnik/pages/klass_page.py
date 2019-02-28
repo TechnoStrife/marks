@@ -4,7 +4,7 @@ from urllib.parse import parse_qs, urlparse
 
 from dnevnik.fetch_queue import FetchQueueProcessor
 from dnevnik.pages import TeacherPage, ClassesListPage
-from dnevnik.support import transform_class_name, class_grade
+from dnevnik.support import transform_class_name, class_grade, get_query_params
 from main.models import Teacher, Class
 from .base_page import BasePage
 
@@ -43,7 +43,7 @@ class ClassPage(BasePage):
             self.klass.info = None
         final_class_name = transform_class_name(final_class_name)
 
-        final_class_id = int(parse_qs(urlparse(self.response.url).query)['class'][0])
+        final_class_id = int(get_query_params(self.response.url, 'class'))
         if final_class_id != self.klass.dnevnik_id:
             final_class = copy.copy(self.klass)
             final_class.name = final_class_name
@@ -59,8 +59,7 @@ class ClassPage(BasePage):
         head_teacher = head_teacher.find(class_='first').find_all('a')[1]
         if not head_teacher['href']:
             raise RuntimeError
-        self.head_teacher_id = head_teacher['href'][len('https://dnevnik.ru/user/user.aspx?user='):].strip()
-        self.head_teacher_id = int(self.head_teacher_id)
+        self.head_teacher_id = int(get_query_params(head_teacher['href'], 'user'))
 
         head_teacher = Teacher.objects.filter(dnevnik_id=self.head_teacher_id)
         if head_teacher.exists():

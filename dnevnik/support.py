@@ -1,8 +1,10 @@
 import itertools
 import re
-from typing import List, Any, Union, Iterator, TypeVar, Callable
+from typing import List, Any, Union, Iterator, TypeVar, Callable, Sequence
+from urllib.parse import parse_qs, urlparse
 
-from bs4.element import NavigableString
+from bs4 import BeautifulSoup
+from bs4.element import NavigableString, Tag
 from requests import Session
 
 from dnevnik import settings
@@ -16,7 +18,9 @@ __all__ = [
     'flat_2d',
     'transform_class_name',
     'class_grade',
-    'unique'
+    'unique',
+    'first_or_list',
+    'get_query_params'
 ]
 
 T = TypeVar('T')
@@ -53,6 +57,8 @@ def request_page(session: Session, url, params=None, data=None):
         )
         if r.status_code == 200 and len(r.text) > 0:
             break
+        # if r.status_code >= 400:
+        #     raise RuntimeError(f'status: {r.status_code}')
         if tries >= 10:
             raise RuntimeError
         time.sleep(tries)
@@ -67,7 +73,7 @@ def skip_navigable_strings(soup):
         yield z
 
 
-def exclude_navigable_strings(soup):
+def exclude_navigable_strings(soup: Union[BeautifulSoup, Tag]) -> List[Tag]:
     # noinspection PyProtectedMember
     from bs4 import NavigableString
     return [x for x in soup if type(x) is not NavigableString]
@@ -109,3 +115,12 @@ def unique(sequence: Union[List[T], Iterator[T]], key: Callable[[T], Any] = lamb
         seen[marker] = 1
         result.append(item)
     return result
+
+
+def first_or_list(arr: Sequence[Any]):
+    return arr[0] if len(arr) == 1 else arr
+
+
+def get_query_params(url: str, *args: str) -> Union[str, List[Union[str, List[str]]]]:
+    query = parse_qs(urlparse(url).query)
+    return first_or_list([first_or_list(query[param]) for param in args])

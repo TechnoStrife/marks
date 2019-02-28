@@ -5,8 +5,10 @@ from bs4 import BeautifulSoup
 
 from dnevnik.fetch_queue import FetchQueueProcessor
 from dnevnik.pages.base_page import BasePage, ResponseType
-from dnevnik.support import flat_2d, unique
+from dnevnik.support import flat_2d, unique, get_query_params
 from main.models import Subject, Class, Lesson
+
+__all__ = ['SubjectsPage']
 
 
 class SubjectsPage(BasePage):
@@ -26,13 +28,9 @@ class SubjectsPage(BasePage):
     def parse(self):
         self.soup = BeautifulSoup(self.json['html'], 'lxml')
         subjects = self.soup.find_all('a')
-        'https://schools.dnevnik.ru/journals/journalclassical.aspx' \
-            '?view=subject&school=***REMOVED***&group=1448121055668900357&subject=3293138171526831' \
-            '&period=1448167329646543382&year=2018'
         for z, subject in enumerate(subjects):
             name = subject.text
-            query = parse_qs(urlparse(subject['href']).query)
-            subject_id = int(query['subject'][0])
+            subject_id = int(get_query_params(subject['href'], 'subject'))
             subject = Subject(name=name, dnevnik_id=subject_id, type=Subject.OTHERS)
             self.subjects.append(subject)
         return self
