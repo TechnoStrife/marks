@@ -1,6 +1,6 @@
 from django.db.models import *
 
-from main.base_model import MyModel as Model
+from main.base_models import MyModel as Model, PersonModel
 
 __all__ = [
     'Period',
@@ -26,57 +26,14 @@ class Period(Model):
         verbose_name_plural = 'четверти'
 
 
-class Teacher(Model):
-    full_name = CharField(max_length=127, verbose_name='ФИО')
+class Teacher(PersonModel):
     job = CharField(max_length=128, verbose_name='Должность', null=True)
-    birthday = DateField(verbose_name='День рождения', null=True)
-    tel = CharField(max_length=15, verbose_name='Телефон', null=True)
-    email = EmailField(verbose_name='Email', null=True)
-    dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True, null=True)
-
-    @property
-    def name(self):
-        surname, name, patronymic = self.full_name.split()
-        name = f'{surname} {name[0]}. {patronymic[0]}.'
-        return name
-
-    @name.setter
-    def name(self, value):
-        self.full_name = value
-
-    @property
-    def first_name(self):
-        surname, name, patronymic = self.full_name.split()
-        return name
-
-    @property
-    def patronymic(self):
-        surname, name, patronymic = self.full_name.split()
-        return patronymic
-
-    @property
-    def middle_name(self):
-        return self.patronymic
-
-    @property
-    def surname(self):
-        surname, name, patronymic = self.full_name.split()
-        return surname
-
-    def check_name(self, check: str):
-        check = check.split()
-        if len(check) != 3:
-            return False
-        return all(name in check for name in self.full_name.split())
-
-    def dnevnik_link(self):
-        if self.dnevnik_id:
-            return 'https://dnevnik.ru/user/user.aspx?user=' + str(self.dnevnik_id)
-        else:
-            return None
 
     def __str__(self):
         return self.full_name
+
+    def __repr__(self):
+        return f'<Teacher {str(self)}>'
 
     class Meta:
         verbose_name = 'учитель'
@@ -141,56 +98,23 @@ class Subject(Model):
         verbose_name_plural = 'предметы'
 
 
-class Student(Model):
-    full_name = CharField(max_length=255, verbose_name='Имя')
+class Student(PersonModel):
     info = CharField(max_length=4096, verbose_name='Примечания', null=True)
 
     klass = ForeignKey(Class, verbose_name='Класс', on_delete=CASCADE)
     previous_classes = ManyToManyField(Class, db_table='students_previous_classes',
                                        verbose_name='Предыдущие классы', related_name='+')
 
-    first_mark = ForeignKey('Mark', on_delete=PROTECT, verbose_name='Первая оценка', null=True, related_name='+')
-    last_mark = ForeignKey('Mark', on_delete=PROTECT, verbose_name='Последняя оценка', null=True, related_name='+')
+    entered = DateField(verbose_name='Дата начала обучения', null=True)
+    leaved = DateField(verbose_name='Дата конца обучения', null=True)
 
-    birthday = CharField(max_length=20, verbose_name='День рождения', null=True)
-    tel = CharField(max_length=15, verbose_name='Телефон', null=True)
-    email = EmailField(verbose_name='Email', null=True)
     parents = CharField(max_length=1024, verbose_name='Родители', default='')
-
-    dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True, null=True)
-    dnevnik_student_id = BigIntegerField(verbose_name='ID ученика в dnevnik.ru', unique=True, null=True)
-
-    @property
-    def name(self):
-        surname, name, patronymic = self.full_name.split()
-        name = f'{surname} {name[0]}. {patronymic[0]}.'
-        return name
-
-    @name.setter
-    def name(self, value):
-        self.full_name = value
-
-    @property
-    def first_name(self):
-        surname, name, patronymic = self.full_name.split()
-        return name
-
-    @property
-    def patronymic(self):
-        surname, name, patronymic = self.full_name.split()
-        return patronymic
-
-    @property
-    def middle_name(self):
-        return self.patronymic
-
-    @property
-    def surname(self):
-        surname, name, patronymic = self.full_name.split()
-        return surname
 
     def __str__(self):
         return '%s (%s)' % (self.name, self.klass.name)
+
+    def __repr__(self):
+        return f'<Student {str(self)}>'
 
     class Meta:
         verbose_name = 'ученик'
@@ -237,17 +161,18 @@ class Mark(Model):
     is_terminal = BooleanField(default=False, verbose_name='Годовая')
 
     def __str__(self):
+        subject_name = self.lesson_info.subject.name.lower()
         if self.presence == self.ABSENT:
             # TODO изменение по роду "не было"
-            return '%s не было на %s в %s' % (self.student, self.lesson_info.subject.name.lower(), self.date)
+            return f'{self.student} не было на {subject_name} в {self.date}'
 
         # TODO склонение предметов
         if self.is_semester:
-            return 'Четвертная оценка %i по %s - %s' % (self.mark, self.lesson_info.subject.name.lower(), self.student)
+            return f'Четвертная оценка {self.mark} по {subject_name} - {self.student}'
         elif self.is_terminal:
-            return 'Итоговая оценка %i по %s - %s' % (self.mark, self.lesson_info.subject.name.lower(), self.student)
+            return f'Итоговая оценка {self.mark} по {subject_name} - {self.student}'
 
-        return '%i по %s за %s - %s' % (self.mark, self.lesson_info.subject.name.lower(), self.date, self.student)
+        return f'{self.mark} по {subject_name} за {self.date} - {self.student}'
 
     class Meta:
         verbose_name = 'оценка'

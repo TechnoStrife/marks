@@ -1,7 +1,6 @@
 from time import time
 import django
 
-
 django.setup()
 
 from dnevnik.support import login
