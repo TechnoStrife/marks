@@ -18,17 +18,14 @@ class LessonPage(BasePage):
     URL = 'https://schools.dnevnik.ru/journals/journalclassical.aspx'
 
     def __init__(self, lesson: Lesson, period: Period = None, year=None):
-        params = {
+        super().__init__({
             'view': 'subject',
             'school': settings.SCHOOL_ID,
             'group': lesson.klass.dnevnik_id,
-            'subject': lesson.subject.dnevnik_id
-        }
-        if period is not None:
-            params['period'] = str(period.dnevnik_id)
-        if year is not None:
-            params['year'] = str(year)
-        super().__init__(params)
+            'subject': lesson.subject.dnevnik_id,
+            'period': str(period.dnevnik_id),
+            'year': year
+        })
         self.year: int = year
         self.lesson: Lesson = lesson
         self.period: Period = period

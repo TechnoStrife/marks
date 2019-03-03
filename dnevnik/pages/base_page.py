@@ -23,6 +23,15 @@ class BasePage:
     response_type: ResponseType = ResponseType.HTML
 
     def __init__(self, params: Union[None, dict] = None, data: Union[None, dict] = None):
+        if params is not None:
+            for k, v in list(params.items()):
+                if v is None:
+                    del params[k]
+        if data is not None:
+            for k, v in list(data.items()):
+                if v is None:
+                    del data[k]
+
         self.params = params
         self.data = data
 

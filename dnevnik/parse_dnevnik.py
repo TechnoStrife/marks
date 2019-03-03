@@ -23,7 +23,7 @@ def main():
     # ClassPage.scan_all_classes(fetch_queue, save=True)
 
     # Student.objects.all().delete()
-    # StudentListPage.scan_all_pages(fetch_queue, save=True)
+    # StudentListPage.scan_all_years(fetch_queue, save=True)
 
     # xss_token = ClassesListPage(year=current_year()).fetch(session).parse_xss()
     # Subject.objects.all().delete()

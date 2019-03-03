@@ -10,13 +10,17 @@ __all__ = ['UserListPage']
 
 
 class UserListPage(BasePage):
-    def __init__(self, page):
+    def __init__(self, page: int, year: int = None, date: str = None):
         super().__init__(params={
             'school': settings.SCHOOL_ID,
-            'page': page
+            'page': page,
+            'year': year,
+            'date': date
         })
         self.last_page: int = None
         self.table: BeautifulSoup = None
+        self.year = year
+        self.date = date
 
     def extract_pages_count(self):
         pager = self.soup.find(class_='pager')
