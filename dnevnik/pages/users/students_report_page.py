@@ -1,16 +1,17 @@
 from typing import Tuple, Union, List
 
 from bs4 import BeautifulSoup
+from bs4.element import Tag
 
 from dnevnik.fetch_queue import FetchQueueProcessor
-from dnevnik.pages.users.user_list_page import UserListPage
+from dnevnik.pages.users.users_report_page import UsersReportPage
 from dnevnik.support import exclude_navigable_strings, flat_2d, get_query_params, unique
 from main.models import Class, Student
 
-__all__ = ['StudentListPage']
+__all__ = ['StudentsReportPage']
 
 
-class StudentListPage(UserListPage):
+class StudentsReportPage(UsersReportPage):
     URL: str = 'https://schools.dnevnik.ru/reports/default.aspx?report=people-students'
 
     def __init__(self, page: int = 1, year: int = None, date: str = None):
@@ -50,7 +51,7 @@ class StudentListPage(UserListPage):
         return list(zip(years, dates))
 
     @staticmethod
-    def extract_parents(tr: BeautifulSoup, tr2: BeautifulSoup) -> str:
+    def extract_parents(tr: List[Tag], tr2: BeautifulSoup) -> str:
         parents = ''
         if tr[5].text.strip() != '':
             parents = tr[5]['title']
@@ -89,8 +90,8 @@ class StudentListPage(UserListPage):
     @staticmethod
     def scan_all_pages(fetch_queue: FetchQueueProcessor,
                        year: int = None, date: str = None, save: bool = False) -> List[Student]:
-        page1 = StudentListPage(1, year, date).fetch(fetch_queue.session).parse()
-        pages = [StudentListPage(page, year, date) for page in range(2, page1.last_page + 1)]
+        page1 = StudentsReportPage(1, year, date).fetch(fetch_queue.session).parse()
+        pages = [StudentsReportPage(page, year, date) for page in range(2, page1.last_page + 1)]
         fetch_queue.process(pages)
         students = flat_2d([page1.students] + [page.students for page in pages])
         if save:
@@ -99,13 +100,13 @@ class StudentListPage(UserListPage):
 
     @staticmethod
     def scan_all_years(fetch_queue: FetchQueueProcessor, save: bool = False) -> List[Student]:
-        years = StudentListPage().fetch(fetch_queue.session).extract_years()
-        first_pages = [StudentListPage(1, year, date) for year, date in years]
+        years = StudentsReportPage().fetch(fetch_queue.session).extract_years()
+        first_pages = [StudentsReportPage(1, year, date) for year, date in years]  # if year >= VERY_FIRST_YEAR
         fetch_queue.process(first_pages)
         pages = []
         for page1 in first_pages:
             for page_n in range(2, page1.last_page + 1):
-                pages.append(StudentListPage(page_n, page1.year, page1.date))
+                pages.append(StudentsReportPage(page_n, page1.year, page1.date))
         fetch_queue.process(pages)
         pages.extend(first_pages)
         students = (student for page in pages for student in page.students)

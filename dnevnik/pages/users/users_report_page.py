@@ -6,10 +6,10 @@ from dnevnik import settings
 from dnevnik.pages.base_page import BasePage
 from dnevnik.support import exclude_navigable_strings
 
-__all__ = ['UserListPage']
+__all__ = ['UsersReportPage']
 
 
-class UserListPage(BasePage):
+class UsersReportPage(BasePage):
     def __init__(self, page: int, year: int = None, date: str = None):
         super().__init__(params={
             'school': settings.SCHOOL_ID,
@@ -37,3 +37,7 @@ class UserListPage(BasePage):
         self.extract_pages_count()
         self.table = exclude_navigable_strings(self.soup.find(class_='grid'))
         return self
+
+    def free(self):
+        super().free()
+        self.table = None

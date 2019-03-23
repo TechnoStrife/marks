@@ -2,6 +2,7 @@ import re
 from typing import List, Union
 
 from dnevnik import settings
+from dnevnik.settings import VERY_FIRST_YEAR
 from dnevnik.support import transform_class_name
 from main.models import Class
 from .base_page import BasePage
@@ -55,6 +56,8 @@ class ClassesListPage(BasePage):
             print('years', year)
             page = ClassesListPage(year=year).fetch(session).parse()
             classes.extend(page.classes)
+            if year <= VERY_FIRST_YEAR:
+                break
             if page.previous_year:
                 year -= 1
             else:

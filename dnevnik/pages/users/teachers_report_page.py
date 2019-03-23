@@ -4,14 +4,14 @@ from bs4 import BeautifulSoup
 from dnevnik.support import exclude_navigable_strings, get_query_params
 
 from dnevnik.fetch_queue import FetchQueueProcessor
-from dnevnik.pages.users.user_list_page import UserListPage
+from dnevnik.pages.users.users_report_page import UsersReportPage
 from dnevnik.support import flat_2d
 from main.models import Teacher
 
-__all__ = ['TeacherListPage']
+__all__ = ['TeachersReportPage']
 
 
-class TeacherListPage(UserListPage):
+class TeachersReportPage(UsersReportPage):
     URL: str = 'https://schools.dnevnik.ru/reports/default.aspx?report=people-staff'
 
     def __init__(self, page: int = 1):
@@ -53,8 +53,8 @@ class TeacherListPage(UserListPage):
     @staticmethod
     def scan_all_pages(fetch_queue: FetchQueueProcessor, save: bool = False) -> List[Teacher]:
         print('teachers', 1)
-        page1 = TeacherListPage().fetch(fetch_queue.session).parse()
-        pages = [TeacherListPage(page=page) for page in range(2, page1.last_page + 1)]
+        page1 = TeachersReportPage().fetch(fetch_queue.session).parse()
+        pages = [TeachersReportPage(page=page) for page in range(2, page1.last_page + 1)]
         fetch_queue.process(pages)
         teachers = flat_2d([page1.teachers] + [page.teachers for page in pages])
         if save:

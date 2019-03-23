@@ -43,6 +43,7 @@ class PageFetcher(Thread):
             self.fetching = True
             page.fetch(self.fetch_queue.session)
             page.parse()
+            page.free()
             self.fetching = False
 
 
@@ -61,16 +62,20 @@ class FetchQueueProcessor:
             pages = [pages]
         for page in pages:
             self.queue.put(page)
+            self._print_status(pages)
             time.sleep(0.05)
+
+    def _print_status(self, pages):
+        queue_pages_count = sum(not page.parsed for page in pages)
+        print(f'\r{queue_pages_count}/{len(pages)}, {self.fetchers_busy()}/{self.max_requests}', end='')
 
     def process(self, pages: Union[BasePage, List[BasePage]]) -> None:
         self.put(pages)
         if type(pages) is not list:
             pages = [pages]
         while any(not page.parsed for page in pages):
-            queue_pages_count = sum(not page.parsed for page in pages)
-            print(f'\r{queue_pages_count}/{len(pages)}, {self.fetchers_busy()}/{self.max_requests}', end='')
-            time.sleep(0.05)
+            self._print_status(pages)
+            time.sleep(0.1)
         print()
 
     def fetchers_busy(self) -> int:

@@ -66,3 +66,7 @@ class UserPage(BasePage):
         if '(' in self.birthday:  # cut age like '19 октября 1992 (25 лет)' -> '19 октября 1992'
             self.birthday = self.birthday[:self.birthday.find('(')].strip()
         self.extract_contacts()
+
+    def free(self):
+        super().free()
+        self.profile_soup = None

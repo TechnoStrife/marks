@@ -46,3 +46,8 @@ class BasePage:
 
     def parse(self) -> 'BasePage':
         return self
+
+    def free(self):
+        self.response = None
+        self.soup = None
+        self.json = None

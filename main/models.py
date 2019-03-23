@@ -101,7 +101,7 @@ class Subject(Model):
 class Student(PersonModel):
     info = CharField(max_length=4096, verbose_name='Примечания', null=True)
 
-    klass = ForeignKey(Class, verbose_name='Класс', on_delete=CASCADE)
+    klass = ForeignKey(Class, verbose_name='Класс', on_delete=CASCADE, null=True)
     previous_classes = ManyToManyField(Class, db_table='students_previous_classes',
                                        verbose_name='Предыдущие классы', related_name='+')
 

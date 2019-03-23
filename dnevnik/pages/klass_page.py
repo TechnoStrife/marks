@@ -1,6 +1,5 @@
 import copy
 from typing import Union, List
-from urllib.parse import parse_qs, urlparse
 
 from dnevnik.fetch_queue import FetchQueueProcessor
 from dnevnik.pages import TeacherPage, ClassesListPage
@@ -88,11 +87,16 @@ class ClassPage(BasePage):
                     continue
                 page.klass.head_teacher = head_teachers[page.head_teacher_id]
         classes = [page.klass for page in pages]
+
         if save:
             Teacher.objects.bulk_create(
                 [klass.head_teacher for klass in classes
                  if klass.head_teacher and klass.head_teacher.pk is None]
             )
-            Class.objects.bulk_create(classes)
+            for klass in sorted(classes, key=lambda klass: klass.year, reverse=True):
+                if klass.final_class is not None:
+                    search_for = klass.final_class.dnevnik_id
+                    klass.final_class = next(klass for klass in classes if klass.dnevnik_id == search_for)
+                klass.save()
 
         return classes

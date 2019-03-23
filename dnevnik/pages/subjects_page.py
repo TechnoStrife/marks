@@ -1,11 +1,10 @@
 from typing import List
-from urllib.parse import parse_qs, urlparse
 
 from bs4 import BeautifulSoup
 
 from dnevnik.fetch_queue import FetchQueueProcessor
 from dnevnik.pages.base_page import BasePage, ResponseType
-from dnevnik.support import flat_2d, unique, get_query_params
+from dnevnik.support import unique, get_query_params
 from main.models import Subject, Class, Lesson
 
 __all__ = ['SubjectsPage']
@@ -33,24 +32,24 @@ class SubjectsPage(BasePage):
             subject_id = int(get_query_params(subject['href'], 'subject'))
             subject = Subject(name=name, dnevnik_id=subject_id, type=Subject.OTHERS)
             self.subjects.append(subject)
+        self.parsed = True
         return self
 
     @staticmethod
     def scan_all_classes(fetch_queue: FetchQueueProcessor, classes: List[Class], xss_token: str, save: bool = False):
         pages = [SubjectsPage(klass, xss_token) for klass in classes]
-        # fetch_queue.process(pages)
-        for page in pages:
-            page.fetch(fetch_queue.session).parse()
+        fetch_queue.process(pages)
 
         subjects = [subject for page in pages for subject in page.subjects]
         subjects = unique(subjects, lambda x: x.dnevnik_id)
         if save:
-            Subject.objects.bulk_create(subjects)
+            for subject in subjects:
+                subject.save()
         subjects_map = {subject.dnevnik_id: subject for subject in subjects}
         lessons = [Lesson(klass=page.klass, subject=subjects_map[subject.dnevnik_id])
                    for page in pages for subject in page.subjects]
-        # if save:
-        #     Lesson.objects.bulk_create(lessons)
+        if save:
+            Lesson.objects.bulk_create(lessons)
         return subjects, lessons
 
 

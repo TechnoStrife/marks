@@ -1,5 +1,6 @@
 
 import datetime
+from typing import List
 
 LOGIN = '***REMOVED***'
 PASSWORD = '***REMOVED***'
@@ -7,8 +8,9 @@ SCHOOL_ID = ***REMOVED***
 
 CHROME_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ' \
                     'Chrome/69.0.3497.100 Safari/537.36 '
-
-VERY_FIRST_YEAR = 2012
+MONTHS: List[str] = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+                     'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
+VERY_FIRST_YEAR = 2017
 
 
 def current_year():

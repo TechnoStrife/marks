@@ -1,4 +1,5 @@
 from time import time
+
 import django
 
 django.setup()
@@ -6,33 +7,44 @@ django.setup()
 from dnevnik.support import login
 from dnevnik.pages import *
 from dnevnik.fetch_queue import FetchQueueProcessor
-from dnevnik.settings import current_year
 from main.models import *
 
 
 def main():
-    print('Logging in')
+    print('Logging in...', end=' ')
     session = login()
-    # fetch_queue = FetchQueueProcessor(session)
-    # fetch_queue.start()
+    print('done')
+    fetch_queue = FetchQueueProcessor(session)
+    fetch_queue.start()
 
     # Teacher.objects.all().delete()
-    # TeacherListPage.scan_all_pages(fetch_queue, save=True)
+    # print('teachers')
+    # TeacherListPage.scan_all(fetch_queue, save=True)
+    # print('teachers archive')
+    # TeacherListPage.scan_all(fetch_queue, save=True, archive=True)
 
-    # Class.objects.all().delete()
-    # ClassPage.scan_all_classes(fetch_queue, save=True)
+    Class.objects.all().delete()
+    print('classes')
+    ClassPage.scan_all_classes(fetch_queue, save=True)
 
     # Student.objects.all().delete()
-    # StudentListPage.scan_all_years(fetch_queue, save=True)
+    # print('students')
+    # StudentListPage.scan_all(fetch_queue, save=True)
+    # print('students archive')
+    # StudentListPage.scan_all(fetch_queue, save=True, archive=True)
 
     # xss_token = ClassesListPage(year=current_year()).fetch(session).parse_xss()
     # Subject.objects.all().delete()
-    # _, lessons = SubjectsPage.scan_all_classes(fetch_queue, Class.objects.all(), xss_token, save=True)
+    # Lesson.objects.all().delete()
+    # print('subjects')
+    # SubjectsPage.scan_all_classes(fetch_queue, Class.objects.all(), xss_token, save=True)
 
-    lesson = Lesson(klass=Class.objects.get(id=1316), subject=Subject.objects.get(id=22))
-    page = LessonPage(lesson).fetch(session).parse()
+    # Mark.objects.all().delete()
+    # Period.objects.all().delete()
+    # print('marks')
+    # LessonPage.scan_all(fetch_queue, Lesson.objects.all(), save=True)
 
-    # fetch_queue.stop()
+    fetch_queue.stop()
 
 
 if __name__ == '__main__':

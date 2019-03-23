@@ -3,7 +3,7 @@ import re
 from typing import List, Any, Union, Iterator, TypeVar, Callable, Sequence
 from urllib.parse import parse_qs, urlparse
 
-from bs4 import BeautifulSoup
+import requests
 from bs4.element import NavigableString, Tag
 from requests import Session
 
@@ -49,12 +49,17 @@ def request_page(session: Session, url, params=None, data=None):
     method = session.get if data is None else session.post
     tries = 0
     while True:
-        r = method(
-            url,
-            params=params,
-            data=data,
-            headers={'Referer': url, 'User-Agent': CHROME_USER_AGENT}
-        )
+        try:
+            r = method(
+                url,
+                params=params,
+                data=data,
+                headers={'Referer': url, 'User-Agent': CHROME_USER_AGENT}
+            )
+        except requests.exceptions.ConnectionError:
+            time.sleep(tries)
+            tries += 1
+            continue
         if r.status_code == 200 and len(r.text) > 0:
             break
         # if r.status_code >= 400:
@@ -73,7 +78,7 @@ def skip_navigable_strings(soup):
         yield z
 
 
-def exclude_navigable_strings(soup: Union[BeautifulSoup, Tag]) -> List[Tag]:
+def exclude_navigable_strings(soup: Tag) -> List[Tag]:
     # noinspection PyProtectedMember
     from bs4 import NavigableString
     return [x for x in soup if type(x) is not NavigableString]
