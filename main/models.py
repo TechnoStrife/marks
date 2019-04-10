@@ -1,5 +1,8 @@
+from typing import Union, Iterable
+
 from django.db.models import *
 
+from dnevnik.support import unique
 from main.base_models import MyModel as Model, PersonModel
 
 __all__ = [
@@ -7,6 +10,7 @@ __all__ = [
     'Student',
     'Teacher',
     'Class',
+    'SubjectType',
     'Subject',
     'Lesson',
     'Mark'
@@ -46,7 +50,7 @@ class Class(Model):
     head_teacher = ForeignKey(Teacher, on_delete=CASCADE, verbose_name='Классный руководитель', null=True)
     year = SmallIntegerField(verbose_name='Уч. год')
     dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True)
-    preiods_count = SmallIntegerField(verbose_name='Количество учебных периодов', null=True)
+    periods_count = SmallIntegerField(verbose_name='Количество учебных периодов', null=True)  # TODO delete?
     final_class = ForeignKey('self', verbose_name='Конечный класс', on_delete=SET_NULL, null=True)
     periods = ManyToManyField(Period, db_table='class_periods', verbose_name='Семестры', related_name='+')
 
@@ -69,29 +73,28 @@ class Class(Model):
         verbose_name_plural = 'классы'
 
 
+class SubjectType(Model):
+    subject_name = CharField(max_length=100, verbose_name='Название предмета', unique=True)
+    type = CharField(max_length=100, verbose_name='Образовательная область')
+
+    class Meta:
+        verbose_name = 'Образовательная область предметов'
+        verbose_name_plural = 'Образовательные области предметов'
+
+
 class Subject(Model):
-    PHILOLOGICAL = 'fil'
-    PHYSICS = 'phy'
-    INF_MATH = 'mth'
-    SOCIAL = 'soc'
-    ELECTIVES = 'ele'
-    OTHERS = 'oth'
-
-    TYPES = (
-        (PHILOLOGICAL, 'Филологические'),
-        (PHYSICS, 'Естественно-научные'),
-        (INF_MATH, 'Информационно-математические'),
-        (SOCIAL, 'Социальные'),
-        (ELECTIVES, 'Элективные'),
-        (OTHERS, 'Другие')
-    )
-
     name = CharField(max_length=127, verbose_name='Имя')
-    type = CharField(max_length=5, choices=TYPES)
+    type = CharField(max_length=100, verbose_name='Образовательная область')
     dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True)
 
     def __str__(self):
         return self.name
+
+    def update_type(self):
+        try:
+            self.type = SubjectType.objects.get(subject_name=self.name).type
+        except SubjectType.DoesNotExist:
+            self.type = 'Прочее'
 
     class Meta:
         verbose_name = 'предмет'
@@ -115,6 +118,35 @@ class Student(PersonModel):
 
     def __repr__(self):
         return f'<Student {str(self)}>'
+
+    def update_classes(self, new_klass: Class, period: Period) -> bool:
+        last_mark = Mark.objects \
+            .filter(lesson_info__klass=self.klass, student=self) \
+            .order_by('-date').first()
+        if last_mark:
+            if last_mark.period.year <= period.year \
+                    and last_mark.period.num <= period.num:
+                self.previous_classes.add(self.klass)
+                self.klass = new_klass
+                return True
+        else:
+            self.klass = new_klass
+            return True
+        return False
+
+    def set_classes_by_marks(self, marks: Union[None, Iterable['Mark']] = None):
+        if marks is None:
+            marks = Mark.objects.only('date', 'id') \
+                .prefetch_related('lesson_info__klass') \
+                .filter(student=self)
+        marks = sorted(marks, key=lambda mark: mark.date, reverse=True)
+        if len(marks) == 0:
+            self.previous_classes.clear()
+            return
+        classes = unique((mark.lesson_info.klass for mark in marks), key=lambda klass: klass.id)
+        self.klass = classes[0]
+        self.previous_classes.set(classes[1:])
+        self.save()
 
     class Meta:
         verbose_name = 'ученик'
@@ -145,14 +177,14 @@ class Mark(Model):
     PRESENT = 0
     ABSENT = 1
 
-    PRESENSE_CHOICES = (
+    PRESENCE_CHOICES = (
         (PRESENT, 'Присутствовал'),
         (ABSENT, 'Отсутствовал'),
         # (2, 'Опоздал')
     )
 
     mark = SmallIntegerField(verbose_name='Оценка', null=True)
-    presence = SmallIntegerField(verbose_name='Присутствие', choices=PRESENSE_CHOICES, default=PRESENT)
+    presence = SmallIntegerField(verbose_name='Присутствие', choices=PRESENCE_CHOICES, default=PRESENT)
     student = ForeignKey(Student, verbose_name='Ученик', on_delete=CASCADE)
     lesson_info = ForeignKey(Lesson, verbose_name='Урок', on_delete=CASCADE)
     period = ForeignKey(Period, verbose_name='Четверть', on_delete=CASCADE)
@@ -177,4 +209,3 @@ class Mark(Model):
     class Meta:
         verbose_name = 'оценка'
         verbose_name_plural = 'оценки'
-

@@ -44,10 +44,9 @@ class PersonPage(BasePage):
                 else:
                     key = None
             elif tag.name == 'dd':
-                if key == 'tel':
-                    if key in info and info[key] != '-':
-                        info[key] = tag.text.strip()
-                elif key == 'birthday':
+                if tag.text.strip() == '-':
+                    continue
+                if key == 'birthday':
                     info[key] = transform_date(tag.text.strip())
                 elif key is not None:
                     info[key] = tag.text.strip()

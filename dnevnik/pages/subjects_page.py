@@ -30,7 +30,8 @@ class SubjectsPage(BasePage):
         for z, subject in enumerate(subjects):
             name = subject.text
             subject_id = int(get_query_params(subject['href'], 'subject'))
-            subject = Subject(name=name, dnevnik_id=subject_id, type=Subject.OTHERS)
+            subject = Subject(name=name, dnevnik_id=subject_id)
+            subject.update_type()
             self.subjects.append(subject)
         self.parsed = True
         return self
