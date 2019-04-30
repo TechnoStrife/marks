@@ -1,35 +1,20 @@
 import time
 from queue import Queue, Empty
 from threading import Thread
-from typing import List, Generic, Union, TypeVar
+from typing import List, Union
 
+import requests
 from requests import Session
 
 from dnevnik.pages.base_page import BasePage
 
-T = TypeVar('T')
-
-
-class TypeQueue(Generic[T]):
-    def get(self, block=True, timeout=None) -> T:
-        pass
-
-    def put(self, item: T, block=True, timeout=None) -> None:
-        pass
-
-    def qsize(self) -> int:
-        pass
-
-    def empty(self) -> bool:
-        pass
-
-    def full(self) -> bool:
-        pass
-
 
 class PageFetcher(Thread):
-    def __init__(self, num: int, fetch_queue: 'FetchQueueProcessor'):
-        super().__init__(name='PageFetcher-%d' % num, daemon=True)
+    num = 1
+
+    def __init__(self, fetch_queue: 'FetchQueueProcessor'):
+        super().__init__(name='PageFetcher-%d' % PageFetcher.num, daemon=True)
+        PageFetcher.num += 1
         self.fetch_queue: 'FetchQueueProcessor' = fetch_queue
         self.fetching = False
 
@@ -40,18 +25,21 @@ class PageFetcher(Thread):
             except Empty:
                 continue
 
-            self.fetching = True
-            page.fetch(self.fetch_queue.session)
-            page.parse()
-            page.free()
-            self.fetching = False
+            self._process(page)
+
+    def _process(self, page: BasePage):
+        self.fetching = True
+        page.fetch(self.fetch_queue.session)
+        page.parse()
+        page.free()
+        self.fetching = False
 
 
 class FetchQueueProcessor:
     def __init__(self, session: Session, max_requests: int = 10):
         self.session: Session = session
         self.max_requests: int = max_requests
-        self.queue: TypeQueue[BasePage] = Queue()
+        self.queue: 'Queue[BasePage]' = Queue()
         self.alive: bool = False
         self.threads: List[PageFetcher] = []
 
@@ -99,12 +87,33 @@ class FetchQueueProcessor:
     def start(self):
         self.alive = True
         for z in range(self.max_requests):
-            thread = PageFetcher(z + 1, self)
+            thread = PageFetcher(self)
             thread.start()
             self.threads.append(thread)
+
+    def __enter__(self):
+        self.start()
+        return self
 
     def stop(self):
         self.alive = False
         while any(thread.is_alive() for thread in self.threads):
             time.sleep(0.05)
         self.threads = []
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
+
+
+def with_fetch_queue(func):
+    def fetch_queue_wrapper(*args, session=None, **kwargs):
+        if type(session) is not requests.sessions.Session:
+            raise TypeError('session is incorrect type')
+        if 'fetch_queue' not in kwargs or kwargs['fetch_queue'] is None:
+            with FetchQueueProcessor(session) as fetch_queue:
+                kwargs['fetch_queue'] = fetch_queue
+                func(*args, **kwargs)
+        else:
+            func(*args, **kwargs)
+
+    return fetch_queue_wrapper

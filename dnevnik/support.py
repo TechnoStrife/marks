@@ -1,6 +1,10 @@
 import itertools
+import os
+import pickle
 import re
-from typing import List, Any, Union, Iterator, TypeVar, Callable, Sequence
+from contextlib import contextmanager
+from time import time
+from typing import List, Any, Union, Iterator, TypeVar, Callable, Sequence, Iterable, Tuple
 from urllib.parse import parse_qs, urlparse
 
 import requests
@@ -10,18 +14,21 @@ from requests import Session
 from dnevnik import settings
 from dnevnik.settings import CHROME_USER_AGENT
 
-__all__ = [
-    'skip_navigable_strings',
-    'exclude_navigable_strings',
-    'login',
-    'request_page',
-    'flat_2d',
-    'transform_class_name',
-    'class_grade',
-    'unique',
-    'first_or_list',
-    'get_query_params'
-]
+# __all__ = [
+#     'skip_navigable_strings',
+#     'exclude_navigable_strings',
+#     'login',
+#     'request_page',
+#     'flat_2d',
+#     'transform_class_name',
+#     'class_grade',
+#     'unique',
+#     'first_or_list',
+#     'get_query_params',
+#     'timer',
+#     'with_login',
+#     'remove_equal_items'
+# ]
 
 T = TypeVar('T')
 
@@ -42,6 +49,17 @@ def login() -> Session:
         raise RuntimeError('Неизвестная ошибка при попытке авторизации')
     else:
         raise RuntimeError('WTF how did it get here?')
+
+
+def with_login(func):
+    def login_wrapper(*args, **kwargs):
+        if 'session' not in kwargs or kwargs['session'] is None:
+            print('Logging in...', end=' ')
+            kwargs['session'] = login()
+            print('done')
+        func(*args, **kwargs)
+
+    return login_wrapper
 
 
 def request_page(session: Session, url, params=None, data=None):
@@ -129,3 +147,51 @@ def first_or_list(arr: Sequence[Any]):
 def get_query_params(url: str, *args: str) -> Union[str, List[Union[str, List[str]]]]:
     query = parse_qs(urlparse(url).query)
     return first_or_list([first_or_list(query[param]) for param in args])
+
+
+@contextmanager
+def timer(name: str, after: bool = False):
+    t = time()
+    if not after:
+        print(name + '...', end=' ')
+    yield
+    if after:
+        print(name + ': ', end=' ')
+    t = round(time() - t, 3)
+    if t > 60:
+        t = int(t)
+        m, s = divmod(t, 60)
+        h, m = divmod(m, 60)
+        h = f'{h}h '
+        m = f'{m}m '
+        s = f'{s}s'
+        t = h + m + s
+    print(t)
+
+
+def pickle_get(filename, func):
+    if os.path.exists(filename):
+        return pickle.load(open(filename, 'rb'))
+    else:
+        obj = func()
+        pickle.dump(obj, open(filename, 'wb'))
+        exit()
+        return obj
+
+
+def remove_equal_items(list1: List, list2: List, cmp: Callable[[Any, Any], bool]):
+    z = 0
+    while len(list1) > z:
+        obj1 = list1[z]
+        for obj2 in list2:
+            if cmp(obj1, obj2):
+                list1.remove(obj1)
+                list2.remove(obj2)
+                break
+        else:
+            z += 1
+
+
+def zip_with_extra(list1: List[T], list2: List[T]) -> Tuple[Iterable[Tuple[T, T]], List[T], List[T]]:
+    min_len = min(len(list1), len(list2))
+    return zip(list1, list2), list1[min_len:], list2[min_len:]

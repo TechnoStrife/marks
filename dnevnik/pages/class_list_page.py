@@ -1,13 +1,15 @@
 import re
 from typing import List, Union
 
+import requests
+
 from dnevnik import settings
-from dnevnik.settings import VERY_FIRST_YEAR
+from dnevnik.settings import VERY_FIRST_YEAR, current_year
 from dnevnik.support import transform_class_name
 from main.models import Class
 from .base_page import BasePage
 
-__all__ = ['ClassesListPage']
+__all__ = ['ClassesListPage', 'fetch_xss_token']
 
 
 class ClassesListPage(BasePage):
@@ -64,3 +66,6 @@ class ClassesListPage(BasePage):
                 break
         return classes
 
+
+def fetch_xss_token(session: requests.Session):
+    return ClassesListPage(year=current_year()).fetch(session).parse_xss()

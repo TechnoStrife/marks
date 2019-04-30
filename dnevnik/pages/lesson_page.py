@@ -1,11 +1,6 @@
-import operator
-import os
-import pickle
 import re
 from collections import OrderedDict
-from contextlib import contextmanager
 from datetime import date as Date
-from itertools import groupby
 from time import time
 from typing import List, Dict
 
@@ -14,18 +9,10 @@ from bs4.element import Tag
 from dnevnik import settings
 from dnevnik.fetch_queue import FetchQueueProcessor
 from dnevnik.pages.base_page import BasePage
-from dnevnik.support import get_query_params, exclude_navigable_strings, unique
+from dnevnik.support import get_query_params, exclude_navigable_strings, timer
 from main.models import Period, Lesson, Teacher, Mark, Student
 
 __all__ = ['LessonPage']
-
-
-@contextmanager
-def timer(name: str):
-    t = time()
-    print(name + '...', end=' ')
-    yield
-    print(round(time() - t, 3))
 
 
 def transform_mark(mark: str):
@@ -52,16 +39,18 @@ class LessonPage(BasePage):
         self.year: int = year
         self.lesson: Lesson = lesson
         self.period: Period = period
-        self.periods: List[Period] = None
+        self.periods: List[Period] = []
         self.marks: OrderedDict[Student, List[Mark]] = OrderedDict()
         self.no_marks: bool = False
         self.no_teacher: bool = False
         self.unknown_teacher: bool = False
-        self.unknown_students: List[str] = []
+        self.unknown_students: List[Student] = []
+        self.unknown_students_urls: List[str] = []
 
     def __str__(self):
         if self.parsed:
-            return f'<LessonPage marks={len(self.marks)}>'
+            marks_count = sum(len(marks) for marks in self.marks.values())
+            return f'<LessonPage marks={marks_count}>'
         else:
             return '<LessonPage>'
 
@@ -88,7 +77,7 @@ class LessonPage(BasePage):
         return self
 
     def _extract_info(self):
-        info = self.soup.find(class_='l')
+        info = self.soup.find(class_='header_journal')
 
         assert info.find(class_='m10').h2.text.strip() == self.lesson.subject.name
         year = int(info.find(class_='m10').h3.text[:4])
@@ -97,15 +86,7 @@ class LessonPage(BasePage):
         else:
             assert self.year == year
 
-        teacher_soup = info.find(class_='leads')
-        if 'На этот предмет учитель не назначен' in str(teacher_soup):
-            self.no_teacher = True
-        else:
-            teacher_soup = teacher_soup.find(class_='u')
-            dnevnik_id = int(get_query_params(teacher_soup['href'], 'user'))
-            assert Teacher.objects.filter(dnevnik_id=dnevnik_id).exists()
-            self.lesson.teacher = Teacher.objects.get(dnevnik_id=dnevnik_id)
-            assert self.lesson.teacher.check_name(teacher_soup.text)
+        self._extract_teacher(info)
 
         periods = info.find(class_='period_list')
         periods = periods.find_all(class_='journal-link-period')
@@ -114,7 +95,32 @@ class LessonPage(BasePage):
             periods[z] = Period(num=z + 1, year=self.year, dnevnik_id=dnevnik_id)
             if 'active' in period.a['class'] and self.period is None:
                 self.period = periods[z]
+
         self.periods = periods
+
+    def _extract_teacher(self, info):
+        teacher_soup = info.find(class_='leads')
+
+        if 'На этот предмет учитель не назначен' in str(teacher_soup):
+            self.no_teacher = True
+            return
+
+        teacher_soup = teacher_soup.find(class_='u')
+        teacher_name = teacher_soup.text
+        dnevnik_id = int(get_query_params(teacher_soup['href'], 'user'))
+
+        if self.lesson.teacher is not None and self.lesson.teacher.check_name(teacher_name):
+            return
+        check_name = self.lesson.teacher is None
+        if Teacher.objects.filter(dnevnik_id=dnevnik_id).exists():
+            self.lesson.teacher = Teacher.objects.get(dnevnik_id=dnevnik_id)
+        else:
+            self.lesson.teacher = Teacher(full_name=teacher_name, dnevnik_id=dnevnik_id)
+            self.unknown_teacher = True
+            raise RuntimeError()
+
+        if check_name:
+            assert self.lesson.teacher.check_name(teacher_name)
 
     def _parse_dates(self, table: Tag) -> List[Date]:
         day_regex = re.compile(r'^day_(?P<period>\d)_(?P<month>\d{1,2})_(?P<day>\d{1,2})$')
@@ -135,44 +141,51 @@ class LessonPage(BasePage):
             row = exclude_navigable_strings(row)[1:]  # First td contains useless column number
             dnevnik_person_id = int(get_query_params(row[0].a['href'], 'student'))
             student = Student.objects.filter(dnevnik_person_id=dnevnik_person_id)
-            if not student.exists():
-                name = row[0].a.text.split()
-                self.unknown_students.append(' '.join(name) + ' ' + self.response.url)
-                continue
-            student = student[0]
-            if student.update_classes(self.lesson.klass, self.period):
+            if student.exists():
+                student = student.first()
+            else:
+                name = ' '.join(row[0].a.text.split())
+                student = Student(full_name=name, dnevnik_person_id=dnevnik_person_id)
+                self.unknown_students.append(student)
+                self.unknown_students_urls.append(name + ' ' + self.response.url)
+
+            if student.need_to_update_classes(self.lesson.klass, self.period):
                 self.save_students.append(student)
-            student_marks: List[Mark] = []
+            self.marks[student] = []
             for cell, date in zip(row[1:], dates):
-                presence, marks = exclude_navigable_strings(cell.span)
-                presence = Mark.PRESENT if presence.text.strip() == '' else Mark.ABSENT
-                marks = marks.get_text().strip()
-                marks = marks.split('/')  # like '5/4'
-                if marks == [''] and presence == Mark.PRESENT:
-                    marks = []
-                marks = map(transform_mark, marks)
-                marks = [Mark(mark=mark, presence=presence, student=student,
-                              lesson_info=self.lesson, period=self.period, date=date)
-                         for mark in marks]
-                student_marks.extend(marks)
-            self.marks[student] = student_marks
+                student_marks = self._parse_cell(cell, date, student)
+                self.marks[student].extend(student_marks)
+
+    def _parse_cell(self, cell, date, student):
+        presence, marks = exclude_navigable_strings(cell.span)
+        presence = Mark.PRESENT if presence.text.strip() == '' else Mark.ABSENT
+        marks = marks.get_text().strip()
+        marks = marks.split('/')  # like '5/4'
+        if marks == [''] and presence == Mark.PRESENT:
+            marks = []
+        marks = map(transform_mark, marks)
+        marks = [Mark(mark=mark, presence=presence, student=student,
+                      lesson_info=self.lesson, period=self.period, date=date)
+                 for mark in marks]
+        return marks
 
     @staticmethod
     def scan_all(fetch_queue: FetchQueueProcessor, lessons: List[Lesson], save: bool = False):
-        pages = [LessonPage(lesson) for lesson in lessons]
+        pages: List[LessonPage] = [LessonPage(lesson) for lesson in lessons]
         fetch_queue.process(pages)
         pages2 = []
         for page in pages:
             periods: List[Period] = page.periods.copy()
-            periods.remove(page.period)
+            if page.period in periods:
+                periods.remove(page.period)
             for period in periods:
                 pages2.append(LessonPage(page.lesson, period, page.year))
         fetch_queue.process(pages2)
         pages += pages2
         del pages2
 
-        unknown_students = LessonPage._get_unknown_students(pages)
-        print('unknown_students:', list(unknown_students.keys()))
+        unknown_students = [student for page in pages for student in page.unknown_students]
+        print('unknown_students:', unknown_students)
 
         marks: List[Mark] = []
         periods: Dict[int, Period] = {}
@@ -181,7 +194,14 @@ class LessonPage(BasePage):
                 periods[period.dnevnik_id] = period
             for student_marks in page.marks.values():
                 marks.extend(student_marks)
+
+        if unknown_students:
+            LessonPage._replace_unknown_students(marks, unknown_students)
+
         if save:
+            for unknown_student in unknown_students:
+                unknown_student.save()
+
             with timer('periods'):
                 for period in periods.values():
                     period.save()
@@ -196,20 +216,16 @@ class LessonPage(BasePage):
                     mark.period = periods[mark.period.dnevnik_id]
                 Mark.objects.bulk_create(marks)
 
-        return marks, periods
+        return marks, periods, unknown_students
 
     @staticmethod
-    def _get_unknown_students(pages):
-        unknown_students = [student for page in pages for student in page.unknown_students]
-        res = {}
+    def _replace_unknown_students(marks, unknown_students):
+        unknown_students_map = {}
         for unknown_student in unknown_students:
-            *name, url = unknown_student.split(' ', 2)
-            name = ' '.join(name)
-            if name in res:
-                res[name].append(url)
-            else:
-                res[name] = [url]
-        return res
+            unknown_students_map[unknown_student.dnevnik_person_id] = unknown_student
+        for mark in marks:
+            if mark.student.dnevnik_person_id in unknown_students_map:
+                mark.student = unknown_students_map[mark.student.dnevnik_person_id]
 
     @staticmethod
     def _save_lessons(pages, periods):

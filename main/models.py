@@ -111,7 +111,7 @@ class Student(PersonModel):
     entered = DateField(verbose_name='Дата начала обучения', null=True)
     leaved = DateField(verbose_name='Дата конца обучения', null=True)
 
-    parents = CharField(max_length=1024, verbose_name='Родители', default='')
+    parents = CharField(max_length=1024, verbose_name='Родители', null=True)
 
     def __str__(self):
         return '%s (%s)' % (self.name, self.klass.name)
@@ -119,18 +119,19 @@ class Student(PersonModel):
     def __repr__(self):
         return f'<Student {str(self)}>'
 
-    def update_classes(self, new_klass: Class, period: Period) -> bool:
+    def need_to_update_classes(self, new_klass: Class, period: Period) -> bool:
+        return True
         last_mark = Mark.objects \
             .filter(lesson_info__klass=self.klass, student=self) \
             .order_by('-date').first()
         if last_mark:
             if last_mark.period.year <= period.year \
                     and last_mark.period.num <= period.num:
-                self.previous_classes.add(self.klass)
-                self.klass = new_klass
+                # self.previous_classes.add(self.klass)
+                # self.klass = new_klass
                 return True
         else:
-            self.klass = new_klass
+            # self.klass = new_klass
             return True
         return False
 
@@ -205,6 +206,16 @@ class Mark(Model):
             return f'Итоговая оценка {self.mark} по {subject_name} - {self.student}'
 
         return f'{self.mark} по {subject_name} за {self.date} - {self.student}'
+
+    def equals(self, other: 'Mark'):
+        return self.mark == other.mark \
+               and self.presence == other.presence \
+               and self.date == other.date \
+               and self.student_id == other.student_id \
+               and self.lesson_info_id == other.lesson_info_id \
+               and self.period_id == other.period_id \
+               and self.is_semester == other.is_semester \
+               and self.is_terminal == other.is_terminal
 
     class Meta:
         verbose_name = 'оценка'

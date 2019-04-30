@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from bs4 import BeautifulSoup
 
@@ -23,10 +23,12 @@ class SubjectsPage(BasePage):
         })
         self.klass = klass
         self.subjects: List[Subject] = []
+        self.period: Union[int, None] = None
 
     def parse(self):
         self.soup = BeautifulSoup(self.json['html'], 'lxml')
         subjects = self.soup.find_all('a')
+        self.period = int(get_query_params(subjects[0]['href'], 'period'))
         for z, subject in enumerate(subjects):
             name = subject.text
             subject_id = int(get_query_params(subject['href'], 'subject'))

@@ -1,3 +1,4 @@
+python-catcher
 django
 django-livereload-server
 django-background-tasks

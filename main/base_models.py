@@ -1,12 +1,33 @@
+from django.db import DEFAULT_DB_ALIAS
 from django.db.models import *
 
 __all__ = ['MyModel', 'PersonModel']
 
+from django.db.models import Model
 
-class MyModel(Model):
+
+class FieldTrackerModel(Model):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.changed = False
+
+    def __setattr__(self, name, value):
+        if name != 'changed' and name in (field.name for field in self._meta.fields):
+            self.changed = True
+        super().__setattr__(name, value)
+
+    def save(self, force_insert=False, force_update=False, using=DEFAULT_DB_ALIAS, update_fields=None):
+        super().save(force_insert=force_insert, force_update=force_update, using=using, update_fields=update_fields)
+        self.changed = False
+
+    class Meta:
+        abstract = True
+
+
+class MyModel(FieldTrackerModel):
     def update_or_create(self, search_attr):
         try:
-            obj = self.objects.only('id').get(**{search_attr: getattr(self, search_attr)})
+            obj = type(self).objects.only('id').get(**{search_attr: getattr(self, search_attr)})
         except self.DoesNotExist:
             pass
         else:
