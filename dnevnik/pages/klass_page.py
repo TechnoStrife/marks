@@ -2,7 +2,8 @@ import copy
 from typing import Union, List
 
 from dnevnik.fetch_queue import FetchQueueProcessor
-from dnevnik.pages import TeacherPage, ClassesListPage
+from dnevnik.pages.class_list_page import ClassesListPage
+from dnevnik.pages.users.teacher_page import TeacherPage
 from dnevnik.support import transform_class_name, class_grade, get_query_params
 from main.models import Teacher, Class
 from .base_page import BasePage

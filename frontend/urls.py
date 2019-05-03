@@ -1,6 +1,7 @@
-from django.conf.urls import url
+from django.urls import path
+
 from frontend.views import test
 
 urlpatterns = [
-    url(r'^', test),
+    path(r'', test),
 ]

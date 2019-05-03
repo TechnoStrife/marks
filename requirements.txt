@@ -6,3 +6,5 @@ requests
 bs4
 lxml
 djangorestframework
+coreapi
+pyyaml

@@ -1,91 +1,167 @@
-from django.contrib.auth.models import User
-from rest_framework import serializers
-from main.models import *
+from typing import Type
 
+from django.contrib.auth.models import User
+from django.db.models import Model
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.serializers import *
+
+from main.models import *
 
 __all__ = [
     'UserSerializer',
-    # 'QuarterSerializer',
+    'PeriodSerializer',
     'StudentSerializer',
     'TeacherSerializer',
     'ClassSerializer',
-    # 'SubjectSerializer',
-    # 'LessonSerializer',
-    # 'MarkSerializer',
+    'SubjectTypeSerializer',
+    'SubjectSerializer',
+    'LessonSerializer',
+    'MarkSerializer',
 ]
 
 
-class UserSerializer(serializers.HyperlinkedModelSerializer):
+class ReplaceReservedKeywordAttributes(SerializerMetaclass):
+    def __new__(mcs, name, bases, attrs: dict):
+        attrs = {mcs.rename(name): value for name, value in attrs.items()}
+
+        if 'Meta' in attrs:
+            meta = attrs['Meta']
+            meta.fields = [mcs.rename(name) for name in meta.fields]
+
+        return super().__new__(mcs, name, bases, attrs)
+
+    @staticmethod
+    def rename(name):
+        if len(name) > 1 and name[-1] == '_' and name[-2] != '_':
+            return name[:-1]
+        else:
+            return name
+
+
+# class IncludeBaseFields(type):
+#     def __new__(mcs, name, bases, attrs: dict):
+#         attrs['fields'] = bases[0].fields + attrs['fields']
+#         return super().__new__(mcs, name, bases, attrs)
+
+
+def get_fields(model: Type[Model], exclude=None):
+    if exclude is None:
+        exclude = []
+    return [field.name for field in model._meta.fields if field.name not in exclude]
+
+
+class UserSerializer(HyperlinkedModelSerializer):
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+
     class Meta:
         model = User
-        fields = ('url', 'username', 'email')
-
-
-# class QuarterSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Quarter
-#         fields = ('id', 'year', 'dnevnik_id')
-#
-#
-class StudentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Student
         fields = (
-            'id',
-            'full_name',
-            'info',
-            'klass',
-            'previous_classes',
-            'first_mark',
-            'last_mark',
-            'birthday',
-            'tel',
+            'url',
+            'username',
             'email',
-            'dnevnik_id',
-            'not_found_in_dnevnik'
+            'first_name',
+            'last_name',
         )
 
 
-class TeacherSerializer(serializers.ModelSerializer):
+class PeriodSerializer(HyperlinkedModelSerializer):
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+
+    class Meta:
+        model = Period
+        fields = get_fields(Period)
+
+
+class TeacherBasicSerializer(HyperlinkedModelSerializer):
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+    head_in_classes = PrimaryKeyRelatedField(
+        many=True,
+        read_only=True
+    )
+
     class Meta:
         model = Teacher
-        fields = (
-            'id',
-            'full_name',
-            'birthday',
-            'tel',
-            'email',
-            'dnevnik_id',
-            'not_found_in_dnevnik',
-        )
+        fields = get_fields(Teacher) + ['url', 'head_in_classes']
 
 
-class ClassSerializer(serializers.ModelSerializer):
+class ClassBasicSerializer(HyperlinkedModelSerializer):
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+    periods = PeriodSerializer(many=True)
+    final_class = PrimaryKeyRelatedField(read_only=True)
+
     class Meta:
         model = Class
-        fields = (
-            'id',
-            'name',
-            'info',
-            'head_teacher',
-            'year',
-            'dnevnik_id',
-            'final_class',
-        )
+        fields = get_fields(Class) + ['url', 'periods']
 
-# class SubjectSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Subject
-#         fields = ('id', 'year', 'dnevnik_id')
-#
-#
-# class LessonSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Lesson
-#         fields = ('id', 'year', 'dnevnik_id')
-#
-#
-# class MarkSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Mark
-#         fields = ('id', 'year', 'dnevnik_id')
+
+class SubjectTypeSerializer(HyperlinkedModelSerializer):
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+
+    class Meta:
+        model = SubjectType
+        fields = get_fields(SubjectType)
+
+
+class SubjectSerializer(HyperlinkedModelSerializer):
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+
+    class Meta:
+        model = Subject
+        fields = get_fields(Subject) + ['url']
+
+
+class StudentBasicSerializer(HyperlinkedModelSerializer,
+                             metaclass=ReplaceReservedKeywordAttributes):
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+    previous_classes = HyperlinkedRelatedField(
+        many=True,
+        read_only=True,
+        view_name='class-detail'
+    )
+    class_ = PrimaryKeyRelatedField(
+        source='klass',
+        read_only=True
+    )
+
+    class Meta:
+        model = Student
+        fields = get_fields(Student, exclude=['klass']) \
+                 + ['url', 'class_', 'previous_classes']
+
+
+class TeacherSerializer(TeacherBasicSerializer):
+    head_in_classes = ClassBasicSerializer(many=True)
+
+
+class ClassSerializer(ClassBasicSerializer):
+    final_class = ClassBasicSerializer()
+    students = StudentBasicSerializer(many=True)
+
+    class Meta(ClassBasicSerializer.Meta):
+        fields = ClassBasicSerializer.Meta.fields + ['students']
+
+
+class StudentSerializer(StudentBasicSerializer):
+    class_ = ClassBasicSerializer(source='klass')
+    previous_classes = ClassBasicSerializer(many=True)
+
+
+class LessonSerializer(StudentBasicSerializer,
+                       metaclass=ReplaceReservedKeywordAttributes):
+    class_ = ClassSerializer(source='klass')
+    subject = SubjectSerializer()
+    teacher = TeacherSerializer()
+
+    class Meta:
+        model = Lesson
+        fields = get_fields(Lesson, exclude=['klass']) + ['class_']
+
+
+class MarkSerializer(HyperlinkedModelSerializer):
+    student = StudentSerializer()
+    lesson_info = LessonSerializer()
+    period = PeriodSerializer()
+
+    class Meta:
+        model = Mark
+        fields = get_fields(Mark)

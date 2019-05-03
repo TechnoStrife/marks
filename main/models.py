@@ -47,7 +47,8 @@ class Teacher(PersonModel):
 class Class(Model):
     name = CharField(max_length=3, verbose_name='Класс')
     info = CharField(max_length=4096, verbose_name='Примечания', null=True)
-    head_teacher = ForeignKey(Teacher, on_delete=CASCADE, verbose_name='Классный руководитель', null=True)
+    head_teacher = ForeignKey(Teacher, on_delete=CASCADE, verbose_name='Классный руководитель',
+                              null=True, related_name='head_in_classes')
     year = SmallIntegerField(verbose_name='Уч. год')
     dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True)
     periods_count = SmallIntegerField(verbose_name='Количество учебных периодов', null=True)  # TODO delete?
@@ -104,7 +105,7 @@ class Subject(Model):
 class Student(PersonModel):
     info = CharField(max_length=4096, verbose_name='Примечания', null=True)
 
-    klass = ForeignKey(Class, verbose_name='Класс', on_delete=CASCADE, null=True)
+    klass = ForeignKey(Class, verbose_name='Класс', on_delete=CASCADE, null=True, related_name='students')
     previous_classes = ManyToManyField(Class, db_table='students_previous_classes',
                                        verbose_name='Предыдущие классы', related_name='+')
 

@@ -162,7 +162,7 @@ def timer(name: str, after: bool = False):
         t = int(t)
         m, s = divmod(t, 60)
         h, m = divmod(m, 60)
-        h = f'{h}h '
+        h = f'{h}h ' if h != 0 else ''
         m = f'{m}m '
         s = f'{s}s'
         t = h + m + s
