@@ -1,0 +1,45 @@
+{
+  "name": "marks",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/main.js",
+  "scripts": {
+    "serve": "vue-cli-service serve",
+    "build-ts": "vue-cli-service build",
+    "build": "cross-env NODE_ENV=production webpack --progress --hide-modules",
+    "builddev": "cross-env NODE_ENV=development webpack --progress --hide-modules",
+    "devhot": "cross-env NODE_ENV=development webpack-dev-server --hot --progress --colors --inline"
+  },
+  "dependencies": {
+    "@types/materialize-css": "^1.0.6",
+    "axios": "^0.18.0",
+    "vue": "^2.6.10",
+    "vue-class-component": "^7.0.2",
+    "vue-property-decorator": "^8.1.0",
+    "vue-router": "^3.0.3",
+    "vuex": "^3.0.1"
+  },
+  "devDependencies": {
+    "@vue/cli-plugin-typescript": "^3.7.0",
+    "@vue/cli-service": "^3.7.0",
+    "node-sass": "^4.9.0",
+    "sass-loader": "^7.1.0",
+    "ts-lint": "^4.5.1",
+    "ts-loader": "^4.4.2",
+    "typescript": "^3.4.3",
+    "vue-template-compiler": "^2.5.21",
+    "cross-env": "^5.0.5",
+    "css-loader": "^2.1.0",
+    "file-loader": "^1.1.4",
+    "fork-ts-checker-webpack-plugin": "^0.4.3",
+    "mini-css-extract-plugin": "^0.5.0",
+    "querystring": "^0.2.0",
+    "uglifyjs-webpack-plugin": "^2.1.1",
+    "vue-loader": "^15.4.2",
+    "webpack": "^4.28.2",
+    "webpack-bundle-tracker": "^0.4.2-beta",
+    "webpack-cli": "^3.1.2",
+    "webpack-dev-server": "^3.1.14",
+    "write-file-webpack-plugin": "^4.5.0"
+  }
+}

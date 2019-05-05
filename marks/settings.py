@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    # 'livereload',
+    'webpack_loader',
     'background_task',
     'rest_framework',
     'django.contrib.staticfiles',
@@ -129,4 +129,12 @@ USE_TZ = True
 STATIC_URL = '/static/'
 # STATIC_ROOT = path_from_project_root('static')
 STATIC_ROOT = path_from_project_root('static/dist')
-STATICFILES_DIRS = ['static']
+STATICFILES_DIRS = ['static', 'dist']
+
+WEBPACK_LOADER = {
+    'DEFAULT': {
+        'CACHE': not DEBUG,
+        'BUNDLE_DIR_NAME': 'dist/',
+        'STATS_FILE': os.path.join(BASE_DIR, 'webpack-stats.json'),
+    }
+}

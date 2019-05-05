@@ -1,10 +1,11 @@
 python-catcher
 django
-django-livereload-server
+django-webpack-loader
 django-background-tasks
-requests
-bs4
-lxml
 djangorestframework
 coreapi
 pyyaml
+
+requests
+bs4
+lxml
