@@ -15,40 +15,40 @@
 </template>
 
 <script>
-    export default {
-        name: "TheSidenavProfile"
-    }
+export default {
+    name: "TheSidenavProfile"
+}
 </script>
 
 <style lang="scss">
-    #sidenav-profile {
-        padding-top: 15px;
-        padding-bottom: 15px;
-        width: 100%;
-        background: url(~src/assets/profile-background.png) no-repeat center center;
-        background-size: cover;
-        text-shadow: 1px 1px 1px #444;
+#sidenav-profile {
+    padding-top: 15px;
+    padding-bottom: 15px;
+    width: 100%;
+    background: url(~src/assets/profile-background.png) no-repeat center center;
+    background-size: cover;
+    text-shadow: 1px 1px 1px #444;
 
-        > #profile-icon {
-            width: 86.5px;
-            height: 64px;
-            float: left;
+    > #profile-icon {
+        width: 86.5px;
+        height: 64px;
+        float: left;
+    }
+
+    > #user {
+        width: 213px;
+        padding: 0 12px;
+        float: left;
+
+        > #user-name {
+            height: 32px;
+            font-size: 1.2em;
+            line-height: 32px;
         }
 
-        > #user {
-            width: 213px;
-            padding: 0 12px;
-            float: left;
-
-            > #user-name {
-                height: 32px;
-                font-size: 1.2em;
-                line-height: 32px;
-            }
-
-            > #user-post {
-                height: 32px;
-            }
+        > #user-post {
+            height: 32px;
         }
     }
+}
 </style>

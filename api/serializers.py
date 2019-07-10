@@ -10,13 +10,22 @@ from main.models import *
 __all__ = [
     'UserSerializer',
     'PeriodSerializer',
+    'StudentBasicSerializer',
     'StudentSerializer',
+    'TeacherBasicSerializer',
     'TeacherSerializer',
+    'ClassBasicSerializer',
     'ClassSerializer',
     'SubjectTypeSerializer',
     'SubjectSerializer',
+    'LessonBasicSerializer',
     'LessonSerializer',
+    'MarkBasicSerializer',
     'MarkSerializer',
+    'SemesterMarkBasicSerializer',
+    'SemesterMarkSerializer',
+    'TerminalMarkBasicSerializer',
+    'TerminalMarkSerializer',
 ]
 
 
@@ -38,10 +47,13 @@ class ReplaceReservedKeywordAttributes(SerializerMetaclass):
             return name
 
 
-# class IncludeBaseFields(type):
-#     def __new__(mcs, name, bases, attrs: dict):
-#         attrs['fields'] = bases[0].fields + attrs['fields']
-#         return super().__new__(mcs, name, bases, attrs)
+class OptionalFieldsMixin(ModelSerializer):
+    def to_representation(self, instance):
+        res = super().to_representation(instance)
+        for field in self.Meta.optional_fields:
+            if hasattr(instance, field):
+                res[field] = getattr(instance, field)
+        return res
 
 
 def get_fields(model: Type[Model], exclude=None):
@@ -64,37 +76,41 @@ class UserSerializer(HyperlinkedModelSerializer):
         )
 
 
-class PeriodSerializer(HyperlinkedModelSerializer):
+class PeriodSerializer(ModelSerializer):
     permission_classes = (IsAuthenticatedOrReadOnly,)
 
     class Meta:
         model = Period
         fields = get_fields(Period)
+        read_only_fields = get_fields(Period)
 
 
-class TeacherBasicSerializer(HyperlinkedModelSerializer):
+class TeacherBasicSerializer(OptionalFieldsMixin, ModelSerializer):
     permission_classes = (IsAuthenticatedOrReadOnly,)
-    head_in_classes = PrimaryKeyRelatedField(
-        many=True,
-        read_only=True
-    )
+
+    # head_in_classes = PrimaryKeyRelatedField(
+    #     many=True,
+    #     read_only=True
+    # )
 
     class Meta:
         model = Teacher
-        fields = get_fields(Teacher) + ['url', 'head_in_classes']
+        fields = get_fields(Teacher)
+        read_only_fields = get_fields(Teacher, exclude=['job', 'tel', 'email'])
+        optional_fields = ['lesson_types']
 
 
-class ClassBasicSerializer(HyperlinkedModelSerializer):
+class ClassBasicSerializer(ModelSerializer):
     permission_classes = (IsAuthenticatedOrReadOnly,)
-    periods = PeriodSerializer(many=True)
     final_class = PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = Class
-        fields = get_fields(Class) + ['url', 'periods']
+        fields = get_fields(Class)
+        read_only_fields = get_fields(Class, exclude=['info'])
 
 
-class SubjectTypeSerializer(HyperlinkedModelSerializer):
+class SubjectTypeSerializer(ModelSerializer):
     permission_classes = (IsAuthenticatedOrReadOnly,)
 
     class Meta:
@@ -102,21 +118,21 @@ class SubjectTypeSerializer(HyperlinkedModelSerializer):
         fields = get_fields(SubjectType)
 
 
-class SubjectSerializer(HyperlinkedModelSerializer):
+class SubjectSerializer(ModelSerializer):
     permission_classes = (IsAuthenticatedOrReadOnly,)
 
     class Meta:
         model = Subject
-        fields = get_fields(Subject) + ['url']
+        fields = get_fields(Subject)
+        read_only_fields = get_fields(Subject, exclude=['type'])
 
 
-class StudentBasicSerializer(HyperlinkedModelSerializer,
+class StudentBasicSerializer(ModelSerializer,
                              metaclass=ReplaceReservedKeywordAttributes):
     permission_classes = (IsAuthenticatedOrReadOnly,)
-    previous_classes = HyperlinkedRelatedField(
+    previous_classes = PrimaryKeyRelatedField(
         many=True,
         read_only=True,
-        view_name='class-detail'
     )
     class_ = PrimaryKeyRelatedField(
         source='klass',
@@ -126,19 +142,73 @@ class StudentBasicSerializer(HyperlinkedModelSerializer,
     class Meta:
         model = Student
         fields = get_fields(Student, exclude=['klass']) \
-                 + ['url', 'class_', 'previous_classes']
+                 + ['class_', 'previous_classes']
+        read_only_fields = get_fields(Student, exclude=['info', 'tel', 'email'])
+
+
+class LessonBasicSerializer(ModelSerializer,
+                            metaclass=ReplaceReservedKeywordAttributes):
+    permission_classes = (IsAuthenticatedOrReadOnly,)
+    class_ = PrimaryKeyRelatedField(read_only=True, source='klass')
+    teacher = PrimaryKeyRelatedField(read_only=True)
+    subject = PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = Lesson
+        fields = get_fields(Lesson, exclude=['klass']) + ['class_']
+        read_only_fields = get_fields(Lesson)
+
+
+class MarkBasicSerializer(HyperlinkedModelSerializer):
+    student = PrimaryKeyRelatedField(read_only=True)
+    lesson_info = LessonBasicSerializer(read_only=True)
+    period = PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = Mark
+        fields = get_fields(Mark)
+        read_only_fields = get_fields(Mark)
+
+
+class SemesterMarkBasicSerializer(ModelSerializer):
+    student = PrimaryKeyRelatedField(read_only=True)
+    lesson_info = LessonBasicSerializer(read_only=True)
+    period = PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = SemesterMark
+        fields = get_fields(SemesterMark)
+        read_only_fields = get_fields(SemesterMark)
+
+
+class TerminalMarkBasicSerializer(ModelSerializer):
+    student = PrimaryKeyRelatedField(read_only=True)
+    lesson_info = LessonBasicSerializer(read_only=True)
+
+    class Meta:
+        model = TerminalMark
+        fields = get_fields(TerminalMark)
+        read_only_fields = get_fields(TerminalMark)
 
 
 class TeacherSerializer(TeacherBasicSerializer):
     head_in_classes = ClassBasicSerializer(many=True)
 
+    class Meta(TeacherBasicSerializer.Meta):
+        fields = TeacherBasicSerializer.Meta.fields \
+                 + ['head_in_classes']
+
 
 class ClassSerializer(ClassBasicSerializer):
     final_class = ClassBasicSerializer()
-    students = StudentBasicSerializer(many=True)
+    periods = PeriodSerializer(many=True)
+    # students = StudentBasicSerializer(many=True)
+    # previous_students = StudentBasicSerializer(many=True)
+    head_teacher = TeacherBasicSerializer()
 
     class Meta(ClassBasicSerializer.Meta):
-        fields = ClassBasicSerializer.Meta.fields + ['students']
+        fields = ClassBasicSerializer.Meta.fields \
+                 + ['students', 'periods']
 
 
 class StudentSerializer(StudentBasicSerializer):
@@ -157,11 +227,18 @@ class LessonSerializer(StudentBasicSerializer,
         fields = get_fields(Lesson, exclude=['klass']) + ['class_']
 
 
-class MarkSerializer(HyperlinkedModelSerializer):
+class MarkSerializer(MarkBasicSerializer):
     student = StudentSerializer()
     lesson_info = LessonSerializer()
     period = PeriodSerializer()
 
-    class Meta:
-        model = Mark
-        fields = get_fields(Mark)
+
+class SemesterMarkSerializer(SemesterMarkBasicSerializer):
+    student = StudentSerializer()
+    lesson_info = LessonSerializer()
+    period = PeriodSerializer()
+
+
+class TerminalMarkSerializer(TerminalMarkBasicSerializer):
+    student = StudentSerializer()
+    lesson_info = LessonSerializer()

@@ -37,14 +37,13 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'webpack_loader',
+    # 'webpack_loader',
     'background_task',
     'rest_framework',
     'django.contrib.staticfiles',
     'main',
     'frontend',
     'api',
-    'api.summary',
     'dnevnik'
 ]
 

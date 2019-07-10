@@ -1,156 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    {% load static %}
-    <meta charset="UTF-8">
-    <title>Title</title>
-    <link rel="shortcut icon" href="/static/images/favicon.ico" type="image/x-icon">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="icon" href="/static/images/favicon.ico">
+    <title>Marks</title>
 
-    <link type="text/css" rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"
-          media="screen,projection"/>
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"
+          rel="stylesheet"
+          integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN"
+          crossorigin="anonymous">
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css"> -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link type="text/css" rel="stylesheet" href="{% static 'css/main.css' %}"/>
-{#    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>#}
-    <script
-        src="http://code.jquery.com/jquery-3.3.1.min.js"
-        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
-        crossorigin="anonymous" defer></script>
-    <script type="text/javascript"
-            src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"
-            defer></script>
-    <script type="text/javascript" src="{% static 'js/frontend.js' %}" defer></script>
+    <link href="/static/style.css" rel="stylesheet">
+
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js" defer></script> -->
+    <script src="/static/bundle.js" defer></script>
 </head>
 <body>
-    <header>
-        <ul id="nav" class="sidenav sidenav-fixed">
-            <li id="profile" class="waves-effect">
-                <div id="profile-icon" class="center-align">
-                    <img src="{% static 'images/profile.png' %}" alt="" class="circle">
-                </div>
-                <div id="user" class="white-text">
-                    <div id="user-name" class="truncate valign-wrapper">
-                        Иван Иванович
-                    </div>
-                    <div id="user-post" class="valign-wrapper">
-                        Директор
-                    </div>
-                </div>
-            </li>
-            <li>
-                <a href="#" class="waves-effect waves-teal">
-                    <i class="material-icons">home</i>
-                    <span>Главная</span>
-                </a>
-            </li>
-            <li class="with-flyout">
-                <a class="waves-effect waves-teal">
-                    <i class="material-icons">school</i>
-                    <span>Классы</span>
-                </a>
-                <div class="sidenav-flyout">
-                    <ul>
-                        <li><h5>Классы</h5></li>
-                        <li>
-                            <ul class="collapsible">
-                                <li>
-                                    <div class="collapsible-header waves-effect waves-light">2-е классы</div>
-                                    <div class="collapsible-body">
-                                        <ul>
-                                            <li class="waves-effect waves-light">2А класс</li>
-                                            <li class="waves-effect waves-light">2Б класс</li>
-                                            <li class="waves-effect waves-light">2В класс</li>
-                                        </ul>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="collapsible-header waves-effect waves-light">3-е классы</div>
-                                    <div class="collapsible-body">
-                                        <ul>
-                                            <li class="waves-effect waves-light">3А класс</li>
-                                            <li class="waves-effect waves-light">3Б класс</li>
-                                            <li class="waves-effect waves-light">3В класс</li>
-                                        </ul>
-                                    </div>
-                                </li>
-                                <li>
-                                    <div class="collapsible-header waves-effect waves-light">4-е классы</div>
-                                    <div class="collapsible-body">
-                                        <ul>
-                                            <li class="waves-effect waves-light">4А класс</li>
-                                            <li class="waves-effect waves-light">4Б класс</li>
-                                            <li class="waves-effect waves-light">4В класс</li>
-                                        </ul>
-                                    </div>
-                                </li>
-                            </ul>
-                        </li>
-                    </ul>
-                </div>
-            </li>
-            <li class="with-flyout">
-                <a class="waves-effect waves-teal">
-                    <i class="material-icons">subject</i>
-                    <span>Предметы</span>
-                </a>
-                <div class="sidenav-flyout">
-                    <ul>
-                        <li><h5>Предметы</h5></li>
-                        <li>Физика</li>
-                        <li>Русский</li>
-                        <li>Математика</li>
-                    </ul>
-                </div>
-            </li>
-            <li class="with-flyout">
-                <a class="waves-effect waves-teal">
-                    <i class="material-icons">person</i>
-                    <span>Учителя</span>
-                </a>
-                <div class="sidenav-flyout">
-                    <ul>
-                        <li><h5>Учителя</h5></li>
-                        <li>Иванов</li>
-                        <li>Петров</li>
-                        <li>Сидоров</li>
-                    </ul>
-                </div>
-            </li>
-        </ul>
-    </header>
-    <main>
-        <div>
-            <h3>Ad majorem Dei gloriam</h3>
-
-            <p>Lorem ipsum dolor sit amet, consectetur adipisicing.</p>
-            <p>Debitis iure maiores mollitia optio quis voluptatibus.</p>
-            <p>Aliquam ducimus, facere praesentium quo totam unde?</p>
-            <p>Nam porro ratione reiciendis reprehenderit repudiandae rerum.</p>
-            <p>Animi dolores exercitationem, odio quam quos voluptatum!</p>
-            <p><i class="material-icons">crop_rotate</i>crop_rotate</p>
-            <p><i class="material-icons">dashboard</i>dashboard</p>
-            <p><i class="material-icons">data_usage</i>data_usage</p>
-            <p><i class="material-icons">developer_board</i>developer_board</p>
-            <p><i class="material-icons">details</i>details</p>
-            <p><i class="material-icons">equalizer</i>equalizer</p>
-            <p><i class="material-icons">error</i>error</p>
-            <p><i class="material-icons">error_outline</i>error_outline</p>
-            <p><i class="material-icons">insert_chart</i>insert_chart</p>
-            <p><i class="material-icons">memory</i>memory</p>
-            <p><i class="material-icons">loop</i>loop</p>
-            <p><i class="material-icons">school</i>school</p>
-            <p><i class="material-icons">schedule</i>schedule</p>
-            <p><i class="material-icons">settings</i>settings</p>
-            <p><i class="material-icons">show_chart</i>show_chart</p>
-            <p><i class="material-icons">storage</i>storage</p>
-            <p><i class="material-icons">subject</i>subject</p>
-            <p><i class="material-icons">swap_calls</i>swap_calls</p>
-            <p><i class="material-icons">transform</i>transform</p>
-            <p><i class="material-icons">trending_down</i>trending_down</p>
-            <p><i class="material-icons">trending_flat</i>trending_flat</p>
-            <p><i class="material-icons">trending_up</i>trending_up</p>
-            <p><i class="material-icons">3d_rotation</i>3d_rotation</p>
-        </div>
-    </main>
+    <noscript>
+        <strong>We're sorry but marks_js doesn't work properly without
+            JavaScript enabled. Please enable it to continue.</strong>
+    </noscript>
+    <div id="app" data-sidenav="{{ sidenav }}"></div>
 </body>
 </html>

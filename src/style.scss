@@ -1,0 +1,145 @@
+//@import "~chart.js/dist/Chart.min.css";
+@import "~src/variables";
+//@import "~materialize-css/sass/materialize";
+
+body {
+    overflow: hidden;
+}
+
+main {
+    background-color: $content-bg-color;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    height: 100vh;
+
+    @media #{$small-and-down} {
+        padding: 20px 0;
+    }
+    @media #{$medium-and-up} {
+        padding: 30px 20px 0;
+    }
+
+    @media #{$large-and-up} {
+        & {
+            margin-left: $sidenav-width;
+        }
+    }
+}
+
+main, .scroll, .dropdown-content {
+    &::-webkit-scrollbar {
+        width: 5px;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: #666;
+    }
+}
+
+.hide-scroll-on-s {
+    @media #{$small-and-down} {
+        &::-webkit-scrollbar {
+            width: 0;
+        }
+    }
+}
+
+h6 {
+    font-size: 1.3em;
+}
+
+.dropdown-content {
+    max-height: 500px;
+}
+
+main a:not(.btn):not([disabled]):hover {
+    text-decoration: underline;
+}
+main a[disabled] {
+    color: rgba(0, 0, 0, 0.87);
+    cursor: initial;
+}
+
+.material-icons {
+    user-select: none;
+}
+
+a[target="_blank"]:after {
+    content: " \f08e";
+    font-family: FontAwesome;
+    font-size: 0.6em;
+}
+
+.collapsible-header {
+    outline: none
+}
+
+hr {
+    opacity: 0.4;
+}
+
+.ul-title {
+    margin-bottom: 0;
+    + ul {
+        margin-top: 0;
+    }
+}
+
+ul.dashed {
+    list-style-type: none;
+    > li:before {
+        content: "\2013";
+    }
+}
+
+.hint-text {
+    color: #999;
+}
+
+@media #{$small-and-down} {
+    #charts {
+        padding-left: 0;
+        padding-right: 0;
+        > h5, h6 {
+            padding: 0 0.75rem;
+        }
+    }
+    .chart-card {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+}
+
+.chart-card > :first-child {
+    margin-top: 0;
+}
+
+.card-panel > .row {
+    margin: 0;
+}
+
+.chart {
+    padding-top: 20px;
+}
+
+.chart-filter {
+    margin-left: 20px;
+    display: flex;
+    align-items: center;
+    .filter-title {
+        display: inline-block;
+        margin: 4px;
+    }
+    .range-select {
+        display: inline-flex;
+    }
+}
+.chart-filters {
+    display: flex;
+    justify-content: left;
+    flex-wrap: wrap;
+
+    .chart-filter, .chart-sort {
+        flex: 0 0 auto;
+        margin: 5px 10px 5px 0;
+    }
+}

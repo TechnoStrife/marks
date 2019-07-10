@@ -1,6 +1,7 @@
 from django.contrib import admin
-from main.models import *
 from django.utils.translation import gettext_lazy as _
+
+from main.models import *
 
 
 class TeacherAdmin(admin.ModelAdmin):
@@ -15,6 +16,27 @@ class TeacherAdmin(admin.ModelAdmin):
 
     class Meta:
         model = Teacher
+
+
+class SubjectTypeAdmin(admin.ModelAdmin):
+    list_display = [
+        'subject_name',
+        'type',
+    ]
+
+    class Meta:
+        model = SubjectType
+
+
+class SubjectAdmin(admin.ModelAdmin):
+    list_display = [
+        'name',
+        'type',
+        'dnevnik_id',
+    ]
+
+    class Meta:
+        model = Subject
 
 
 class ClassIsFinalListFilter(admin.SimpleListFilter):
@@ -71,5 +93,7 @@ class ClassAdmin(admin.ModelAdmin):
         model = Class
 
 
-admin.site.register(Class, ClassAdmin)
 admin.site.register(Teacher, TeacherAdmin)
+admin.site.register(Class, ClassAdmin)
+admin.site.register(SubjectType, SubjectTypeAdmin)
+admin.site.register(Subject, SubjectAdmin)

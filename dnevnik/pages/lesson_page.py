@@ -220,9 +220,7 @@ class LessonPage(BasePage):
 
     @staticmethod
     def _replace_unknown_students(marks, unknown_students):
-        unknown_students_map = {}
-        for unknown_student in unknown_students:
-            unknown_students_map[unknown_student.dnevnik_person_id] = unknown_student
+        unknown_students_map = {student.dnevnik_person_id: student for student in unknown_students}
         for mark in marks:
             if mark.student.dnevnik_person_id in unknown_students_map:
                 mark.student = unknown_students_map[mark.student.dnevnik_person_id]

@@ -5,6 +5,11 @@
             <span>{{ title }}</span>
         </a>
         <div class="sidenav-flyout">
+            <!--<scrolly>
+                <scrolly-viewport>
+                </scrolly-viewport>
+                <scrolly-bar axis="y"></scrolly-bar>
+            </scrolly>-->
             <h5>{{ title }}</h5>
             <ul class="collapsible" ref="collapsible">
                 <li v-for="group in contents">
@@ -27,92 +32,106 @@
 </template>
 
 <script>
-    export default {
-        name: "SidenavFlyout",
-        props: {
-            icon: String,
-            title: String,
-            contents: Array,
-            active: Boolean,
-        },
-        data() {
-            return {
-                collapsible: null
-            }
-        },
-        mounted() {
-            this.collapsible = M.Collapsible.init(this.$refs.collapsible, {
-                accordion: true
-            });
-        },
-        watch: {
-            active(val) {
-                if (val === false) {
-                    this.collapsible.close()
-                }
+import {Collapsible} from "materialize-css"
+
+
+export default {
+    name: "SidenavFlyout",
+    props: {
+        icon: String,
+        title: String,
+        contents: Array,
+        active: Boolean,
+    },
+    data() {
+        return {
+            collapsible: null
+        }
+    },
+    mounted() {
+        this.collapsible = Collapsible.init(this.$refs.collapsible, {
+            accordion: true
+        })
+    },
+    watch: {
+        active(val) {
+            if (val === false) {
+                this.collapsible.close()
             }
         }
-    }
+    },
+}
 </script>
 
 <style lang="scss">
-    @import "~src/variables.scss";
+@import "~src/variables.scss";
 
-    .sidenav-flyout {
-        color: $sidenav-flyout-text-color;
-        position: fixed;
-        overflow: hidden;
-        left: $sidenav-width;
-        top: 0;
+.sidenav-flyout {
+    color: $sidenav-flyout-text-color;
+    position: fixed;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    left: $sidenav-width;
+    top: 0;
+    width: 0;
+    transition: width 200ms ease-in-out;
+    height: 100vh;
+    background-color: $sidenav-flyout-bg-color;
+
+    -ms-overflow-style: none; // IE 10+
+    scrollbar-width: none; // Firefox
+    &::-webkit-scrollbar { // webkit
         width: 0;
-        transition: width 200ms ease-in-out;
+    }
+
+    /*.scrolly {
         height: 100vh;
-        background-color: $sidenav-flyout-bg-color;
+    }*/
 
-        h5 {
-            text-align: center;
+    h5 {
+        text-align: center;
+    }
+
+    > * {
+        width: $sidenav-flyout-width;
+    }
+
+    li {
+        display: list-item;
+
+        .collapsible-header::after {
+            //noinspection CssNoGenericFontName
+            font-family: 'Material Icons';
+            content: "keyboard_arrow_left";
+            color: $sidenav-flyout-text-color;
+            font-size: 18px;
+            position: absolute;
+            right: 16px;
+            transition: transform 200ms;
         }
 
-        > * {
-            width: $sidenav-flyout-width;
+        &.active .collapsible-header::after {
+            transform: rotate(-90deg);
         }
 
-        li {
-            display: list-item;
+        .collapsible-body {
+            background-color: $sidenav-flyout-collapsible-bg-color;
 
-            .collapsible-header::after {
-                //noinspection CssNoGenericFontName
-                font-family: 'Material Icons';
-                content: "keyboard_arrow_left";
-                color: $sidenav-flyout-text-color;
-                font-size: 18px;
-                position: absolute;
-                right: 16px;
-                transition: transform 200ms;
-            }
+            li {
+                padding-left: 32px;
+                padding-right: 32px;
 
-            &.active .collapsible-header::after {
-                transform: rotate(-90deg);
-            }
+                &:hover {
+                    background-color: rgba(0, 0, 0, 0.05);
+                }
 
-            .collapsible-body {
-                background-color: $sidenav-flyout-collapsible-bg-color;
-
-                li {
-                    padding-left: 32px;
-                    padding-right: 32px;
-
-                    &:hover {
-                        background-color: rgba(0, 0, 0, 0.05);
-                    }
-
-                    a {
-                        background-color: transparent;
-                        color: $sidenav-flyout-text-color;
-                        padding: 0 !important;
-                    }
+                a {
+                    background-color: transparent;
+                    color: $sidenav-flyout-text-color;
+                    padding: 0 !important;
                 }
             }
         }
     }
+}
 </style>

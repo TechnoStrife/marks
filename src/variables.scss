@@ -1,3 +1,4 @@
+
 $sidenav-width: 300px;
 $sidenav-flyout-width: 300px;
 $sidenav-text-color: rgba(0, 0, 0, 0.87);
@@ -6,4 +7,11 @@ $sidenav-flyout-text-color: #F0F0F0;
 $sidenav-flyout-bg-color: #414956;
 $sidenav-flyout-collapsible-bg-color: #383838;
 
-$content-bg-color: #F9F9F9;
+$content-bg-color: #F4F4F4;
+$card-bg-color: #FAFAFA;
+
+$preloader-zindex: 300;
+
+@import "~materialize-css/sass/components/color-variables";
+//@import "~materialize-css/sass/components/color-classes";
+@import "~materialize-css/sass/components/variables";

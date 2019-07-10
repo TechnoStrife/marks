@@ -3,4 +3,5 @@ from .klass_page import ClassPage
 from .lesson_page import LessonPage
 from .subject_types_page import SubjectTypesPage
 from .subjects_page import SubjectsPage
+from .summary_page import SummaryPage
 from .users import *

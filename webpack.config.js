@@ -6,9 +6,10 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 // const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
-const vue_style_loader = process.env.NODE_ENV !== 'production'
-    ? 'vue-style-loader'
-    : MiniCssExtractPlugin.loader;
+// const vue_style_loader = process.env.NODE_ENV !== 'production'
+//     ? 'vue-style-loader'
+//     : MiniCssExtractPlugin.loader;
+const vue_style_loader = MiniCssExtractPlugin.loader
 
 const css_loader = {
     loader: 'css-loader',
@@ -27,7 +28,7 @@ module.exports = {
     },
     plugins: [
         new VueLoaderPlugin(),
-        new BundleTracker({filename: 'webpack-stats.json'}),
+        // new BundleTracker({filename: 'webpack-stats.json'}),
         new WriteFilePlugin(),
         new MiniCssExtractPlugin({
             filename: 'style.css',
@@ -68,6 +69,11 @@ module.exports = {
     module: {
         rules: [
             {
+                test: /\.js$/,
+                use: ["source-map-loader"],
+                enforce: "pre"
+            },
+            {
                 test: /\.css$/,
                 use: [
                     vue_style_loader,
@@ -79,7 +85,14 @@ module.exports = {
                 use: [
                     vue_style_loader,
                     css_loader,
-                    'sass-loader'
+                    {
+                        loader: 'sass-loader',
+                        options: {
+                            "includePaths": [
+                                require('path').resolve(__dirname, 'node_modules')
+                            ]
+                        }
+                    }
                 ],
             },
             {
@@ -123,7 +136,7 @@ module.exports = {
                 }
             },
             {
-                test: /\.(png|jpe?g|gif|webp)(\?.*)?$/,
+                test: /\.(png|jpe?g|gif|webp|svg|woff2?|ttf)(\?.*)?$/,
                 use: [
                     {
                         loader: 'url-loader',

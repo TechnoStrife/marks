@@ -19,7 +19,8 @@ def get_active_periods(fetch_queue: FetchQueueProcessor, classes: List[Class]) -
     fetch_queue.process(pages)
     res = {}
     for page in pages:
-        res[page.klass] = Period.objects.get(dnevnik_id=page.period)
+        if page.period != 0:
+            res[page.klass] = Period.objects.get(dnevnik_id=page.period)
     return res
 
 
@@ -53,40 +54,84 @@ def initial_scan(fetch_queue: FetchQueueProcessor):
     Period.objects.all().delete()
     print('marks')
     LessonPage.scan_all(fetch_queue, Lesson.objects.all(), save=True)
+    print('summary marks')
+    SummaryPage.scan_all(fetch_queue, Lesson.objects.all(), save=True)
 
 
 def everyday_scan(fetch_queue: FetchQueueProcessor):
-    classes = Class.objects.filter(year=current_year())
+    cur_year = current_year()
+    classes = Class.objects.filter(year=cur_year)
     active_periods = get_active_periods(fetch_queue, classes)
     pages = []
-    for lesson in Lesson.objects.filter(klass__year=current_year()):
-        page = LessonPage(lesson, period=active_periods[lesson.klass], year=current_year())
-        pages.append(page)
-    fetch_queue.process(pages)
+    summary_pages = []
+    for lesson in Lesson.objects.filter(klass__year=cur_year):
+        if lesson.klass in active_periods:
+            page = LessonPage(lesson, period=active_periods[lesson.klass], year=cur_year)
+            pages.append(page)
+        summary_page = SummaryPage(lesson, year=cur_year)
+        summary_pages.append(summary_page)
+    fetch_queue.process(pages + summary_pages)
 
-    z = 0
-    loops_num = sum(len(page.marks) for page in pages)
-    insert = []
-    for page in pages:
-        for student, new_marks in page.marks.items():
-            z += 1
-            print(f'\r{z}/{loops_num}', end='')
-
-            if student in page.unknown_students:
-                continue
-
-            marks = Mark.objects.filter(student=student, lesson_info=page.lesson, period=page.period,
-                                        is_semester=False, is_terminal=False)
-            marks = list(marks)
-            to_insert = sync_marks(marks, new_marks)
-            insert.extend(to_insert)
+    print('save marks')
+    insert_marks = extract_and_save_marks(
+        pages,
+        Mark,
+        page_marks=lambda page: page.marks,
+        custom_filter=lambda marks, page: marks.filter(
+            period=page.period,
+            is_semester=False,
+            is_terminal=False
+        )
+    )
     print()
-    print(len(insert), 'new marks')
-    Mark.objects.bulk_create(insert)
+    print(len(insert_marks), 'new marks')
+
+    print('save semester marks')
+    insert_marks = extract_and_save_marks(
+        summary_pages,
+        SemesterMark,
+        page_marks=lambda page: page.semester_marks,
+        custom_filter=lambda marks, _: marks.filter(period__year=cur_year)
+    )
+    print()
+    print(len(insert_marks), 'new marks')
+    print('save terminal marks')
+    insert_marks = extract_and_save_marks(
+        summary_pages,
+        TerminalMark,
+        page_marks=lambda page: page.terminal_marks,
+        custom_filter=lambda marks, _: marks.filter(year=cur_year)
+    )
+    print()
+    print(len(insert_marks), 'new marks')
 
 
-def sync_marks(current: List[Mark], new: List[Mark]):
-    if len(current) == 0 and len(new) == 0:
+def extract_and_save_marks(pages, mark_type, page_marks, custom_filter):
+    mark_groups = [(page, student, marks)
+                   for page in pages
+                   for student, marks in page_marks(page).items()
+                   if student not in page.unknown_students]
+    insert_marks = []
+    for z, group in enumerate(mark_groups):
+        page, student, new_marks = group
+        print(f'\r{z + 1}/{len(mark_groups)}', end='')
+
+        marks = mark_type.objects.filter(student=student, lesson_info=page.lesson)
+        marks = custom_filter(marks, page)
+        to_insert = sync_marks(list(marks), new_marks)
+        insert_marks.extend(to_insert)
+    if insert_marks:
+        mark_type.objects.bulk_create(insert_marks)
+    return insert_marks
+
+
+def sync_marks(current: List[BaseMark], new: List[BaseMark]):
+    update_fields = {
+        Mark: ['mark', 'presence', 'date'],
+        SemesterMark: ['mark', 'period'],
+        TerminalMark: ['mark', 'type'],
+    }
+    if len(current) == len(new) == 0:
         return []
 
     remove_equal_items(current, new, lambda mark1, mark2: mark1.equals(mark2))
@@ -97,10 +142,10 @@ def sync_marks(current: List[Mark], new: List[Mark]):
         elif new_mark is None:
             mark.delete()
         else:
-            mark.mark = new_mark.mark
-            mark.presence = new_mark.presence
-            mark.date = new_mark.date
-            mark.save(update_fields=['mark', 'presence', 'date'])
+            assert type(mark) is type(new_mark)
+            new_mark.id = mark.id
+            new_mark.pk = mark.pk
+            new_mark.save(update_fields=update_fields[type(new_mark)])
     return to_insert
 
 
@@ -116,14 +161,19 @@ def scan_students(fetch_queue: FetchQueueProcessor):
     students = StudentListPage.scan_all(fetch_queue)
     # students += StudentListPage.scan_all(fetch_queue, archive=True)
 
-    for student in students:
-        student.update_or_create('dnevnik_person_id')
+    with timer('saving students'):
+        for student in students:
+            student.update_or_create('dnevnik_person_id')
 
 
-if __name__ == '__main__':
+def main():
     with timer('Total time', after=True):
         session = login()
         with FetchQueueProcessor(session) as fetch_queue:
-            scan_teachers(fetch_queue)
-            scan_students(fetch_queue)
+            # scan_teachers(fetch_queue)
+            # scan_students(fetch_queue)
             everyday_scan(fetch_queue)
+
+
+if __name__ == '__main__':
+    main()

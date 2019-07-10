@@ -13,7 +13,10 @@ __all__ = [
     'SubjectType',
     'Subject',
     'Lesson',
-    'Mark'
+    'BaseMark',
+    'Mark',
+    'SemesterMark',
+    'TerminalMark'
 ]
 
 
@@ -60,11 +63,14 @@ class Class(Model):
 
     @property
     def number(self):
-        return self.name[:-1]
+        return int(self.name[:-1])
 
     @property
     def letter(self):
         return self.name[-1]
+
+    def get_students(self):
+        return Student.objects.filter(Q(klass=self) | Q(previous_classes=self)).distinct()
 
     def __repr__(self):
         return '<Class %s>' % self.name
@@ -95,7 +101,7 @@ class Subject(Model):
         try:
             self.type = SubjectType.objects.get(subject_name=self.name).type
         except SubjectType.DoesNotExist:
-            self.type = 'Прочее'
+            self.type = 'Неизвестно'
 
     class Meta:
         verbose_name = 'предмет'
@@ -107,7 +113,7 @@ class Student(PersonModel):
 
     klass = ForeignKey(Class, verbose_name='Класс', on_delete=CASCADE, null=True, related_name='students')
     previous_classes = ManyToManyField(Class, db_table='students_previous_classes',
-                                       verbose_name='Предыдущие классы', related_name='+')
+                                       verbose_name='Предыдущие классы', related_name='previous_students')
 
     entered = DateField(verbose_name='Дата начала обучения', null=True)
     leaved = DateField(verbose_name='Дата конца обучения', null=True)
@@ -175,7 +181,16 @@ class Lesson(Model):
         verbose_name_plural = 'уроки'
 
 
-class Mark(Model):
+class BaseMark(Model):
+    mark = SmallIntegerField(verbose_name='Оценка', null=True)
+    student = ForeignKey(Student, verbose_name='Ученик', on_delete=CASCADE)
+    lesson_info = ForeignKey(Lesson, verbose_name='Урок', on_delete=CASCADE)
+
+    class Meta:
+        abstract = True
+
+
+class Mark(BaseMark):
     PRESENT = 0
     ABSENT = 1
 
@@ -185,26 +200,15 @@ class Mark(Model):
         # (2, 'Опоздал')
     )
 
-    mark = SmallIntegerField(verbose_name='Оценка', null=True)
     presence = SmallIntegerField(verbose_name='Присутствие', choices=PRESENCE_CHOICES, default=PRESENT)
-    student = ForeignKey(Student, verbose_name='Ученик', on_delete=CASCADE)
-    lesson_info = ForeignKey(Lesson, verbose_name='Урок', on_delete=CASCADE)
-    period = ForeignKey(Period, verbose_name='Четверть', on_delete=CASCADE)
-    date = DateField(null=True, verbose_name='Дата')
-    is_semester = BooleanField(default=False, verbose_name='Четвертная')
-    is_terminal = BooleanField(default=False, verbose_name='Годовая')
+    period = ForeignKey(Period, verbose_name='Четверть', on_delete=CASCADE, null=True)
+    date = DateField(verbose_name='Дата')
 
     def __str__(self):
         subject_name = self.lesson_info.subject.name.lower()
         if self.presence == self.ABSENT:
             # TODO изменение по роду "не было"
             return f'{self.student} не было на {subject_name} в {self.date}'
-
-        # TODO склонение предметов
-        if self.is_semester:
-            return f'Четвертная оценка {self.mark} по {subject_name} - {self.student}'
-        elif self.is_terminal:
-            return f'Итоговая оценка {self.mark} по {subject_name} - {self.student}'
 
         return f'{self.mark} по {subject_name} за {self.date} - {self.student}'
 
@@ -214,10 +218,56 @@ class Mark(Model):
                and self.date == other.date \
                and self.student_id == other.student_id \
                and self.lesson_info_id == other.lesson_info_id \
-               and self.period_id == other.period_id \
-               and self.is_semester == other.is_semester \
-               and self.is_terminal == other.is_terminal
+               and self.period_id == other.period_id
 
     class Meta:
         verbose_name = 'оценка'
         verbose_name_plural = 'оценки'
+
+
+class SemesterMark(BaseMark):
+    period = ForeignKey(Period, verbose_name='Четверть', on_delete=CASCADE, null=True)
+
+    def __str__(self):
+        subject_name = self.lesson_info.subject.name.lower()
+        return f'Четвертная оценка {self.mark} по {subject_name} - {self.student}'
+
+    def equals(self, other: 'SemesterMark'):
+        return self.mark == other.mark \
+               and self.student_id == other.student_id \
+               and self.lesson_info_id == other.lesson_info_id \
+               and self.period_id == other.period_id
+
+    class Meta:
+        verbose_name = 'четвертная оценка'
+        verbose_name_plural = 'четвертные оценки'
+
+
+class TerminalMark(BaseMark):
+    YEAR = 1
+    EXAM = 2
+    FINAL = 3
+    TYPES = (YEAR, EXAM, FINAL)
+    TYPE_CHOICES = (
+        (YEAR, 'Годовая'),
+        (EXAM, 'Экзамен'),
+        (FINAL, 'Итоговая'),
+    )
+
+    year = SmallIntegerField(verbose_name='Год')
+    type = SmallIntegerField(verbose_name='Тип', choices=TYPE_CHOICES)
+
+    def __str__(self):
+        subject_name = self.lesson_info.subject.name.lower()
+        return f'{self.type} оценка {self.mark} по {subject_name} - {self.student}'
+
+    def equals(self, other: 'TerminalMark'):
+        return self.mark == other.mark \
+               and self.student_id == other.student_id \
+               and self.lesson_info_id == other.lesson_info_id \
+               and self.type == other.type \
+               and self.year == other.year
+
+    class Meta:
+        verbose_name = 'итоговая оценка'
+        verbose_name_plural = 'итоговые оценки'

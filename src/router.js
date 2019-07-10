@@ -1,6 +1,11 @@
 import Vue from 'vue'
 import Router from 'vue-router'
-import Home from './views/Home.vue'
+import HomeView from './views/HomeView.vue'
+import TmpView from "@/views/TmpView"
+import ClassView from "@/views/class/ClassView"
+import StudentView from "@/views/student/StudentView"
+import SubjectView from "@/views/subject/SubjectView"
+import TeacherView from "@/views/teacher/TeacherView"
 
 Vue.use(Router)
 
@@ -11,8 +16,33 @@ export default new Router({
         {
             path: '/',
             name: 'home',
-            component: Home
-        }
+            component: HomeView
+        },
+        {
+            path: '/tmp',
+            name: 'tmp',
+            component: TmpView
+        },
+        {
+            path: '/class/:id',
+            name: 'class',
+            component: ClassView
+        },
+        {
+            path: '/student/:id',
+            name: 'student',
+            component: StudentView
+        },
+        {
+            path: '/subject/:id',
+            name: 'subject',
+            component: SubjectView
+        },
+        {
+            path: '/teacher/:id',
+            name: 'teacher',
+            component: TeacherView
+        },
     ]
 })
 // component: () => import(/* webpackChunkName: "about" */ './views/About.vue')
