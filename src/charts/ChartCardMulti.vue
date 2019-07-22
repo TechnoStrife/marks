@@ -1,5 +1,11 @@
 <template>
     <div class="chart-card card-panel" v-if="card">
+        <div class="export-chart" v-if="export_chart_enabled">
+            <button class="btn light waves-effect light-text" @click="$emit('export-chart')">
+                <font-awesome-icon icon="download" size="lg"/>
+                <font-awesome-icon :icon="['far', 'file-excel']" size="lg"/>
+            </button>
+        </div>
         <slot></slot>
         <div class="row chart-filters">
             <slot name="filters"></slot>
@@ -89,6 +95,7 @@ export default {
             sort_ids: null,
             color_each_mark: false,
             sorted_data: null,
+            export_chart_enabled: false,
         }
     },
     computed: {
@@ -177,7 +184,7 @@ export default {
     watch: {
         data() {
             if (this.sort) {
-                if (this.data.length === this.sort_ids.legnth) {
+                if (this.data.length === this.sort_ids.length) {
                     this.sorted_data = rearrange([...this.data], [...this.sort_ids])
                     this.data_changed = true
                 } else {
@@ -187,6 +194,7 @@ export default {
         }
     },
     created() {
+        this.export_chart_enabled = typeof this.$listeners['export-chart'] === 'function'
         if (this.sort)
             this.sort_data()
     },
@@ -213,7 +221,23 @@ export default {
                 return
             this.previous_sort = sort
             this.sort_data()
-        }
+        },
     },
 }
 </script>
+
+<style lang="scss">
+.chart-card {
+    .export-chart {
+        position: relative;
+        .btn {
+            position: absolute;
+            top: 0;
+            right: 0;
+        }
+        + * {
+            margin-top: 0;
+        }
+    }
+}
+</style>

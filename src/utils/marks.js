@@ -1,5 +1,6 @@
 import {chart_color_sequence, chart_colors} from "@/const"
-import {deep_compare, deep_copy, sum} from "@/utils/index"
+import {avg, deep_compare, deep_copy} from "@/utils/index"
+import * as xlsx from "xlsx"
 
 
 export const default_options = {
@@ -74,6 +75,12 @@ export function doughnut_color_datasets(datasets) {
     })
 }
 
+export function class_name_sorter(a, b) {
+    let res = parseInt(a.slice(0, -1)) - parseInt(b.slice(0, -1))
+    if (res !== 0)
+        return res
+    return a[a.length - 1].localeCompare(b[b.length - 1])
+}
 
 export function default_sort_options(data) {
     let sort_options = [
@@ -85,14 +92,7 @@ export function default_sort_options(data) {
         }
     ]
     if (data.every(x => /\d{1,2}[А-Я]/.test(x.label))) {
-        sort_options[0].sorter = (a, b) => {
-            a = a.label
-            b = b.label
-            let res = parseInt(a.slice(0, -1)) - parseInt(b.slice(0, -1))
-            if (res !== 0)
-                return res
-            return a[a.length - 1].localeCompare(b[b.length - 1])
-        }
+        sort_options[0].sorter = (a, b) => class_name_sorter(a.label, b.label)
     }
 
     if (data.every(x => !!x.group))
@@ -107,21 +107,24 @@ export function default_sort_options(data) {
     return sort_options
 }
 
-export function avg_marks_by_groups(marks, key, groups) {
+export function avg_marks_by_groups(marks, key, groups, fields) {
+    let single = fields === undefined
+    if (single)
+        fields = [mark => mark.mark]
     let marks_grouped = {}
+
     for (let group of groups)
         marks_grouped[group] = []
     for (let mark of marks)
-        if (mark.mark)
-            marks_grouped[key(mark)].push(mark)
+        marks_grouped[key(mark)].push(mark)
 
     for (let [group_id, group] of Object.entries(marks_grouped)) {
-        if (group.length === 0) {
-            marks_grouped[group_id] = 0
-        } else {
-            group = group.map(mark => mark.mark)
-            marks_grouped[group_id] = sum(group) / group.length
-        }
+        let res = fields.map(
+            field_getter => avg(group.map(field_getter))
+        )
+        if (single)
+            res = res[0]
+        marks_grouped[group_id] = res
     }
     return marks_grouped
 }
@@ -167,3 +170,28 @@ export function sorter_with_others_group(a, b) {
         return -1
     return a.localeCompare(b)
 }
+
+export function chart_to_excel_sheet(sheet_name, labels, data) {
+    const correct_value = x => {
+        if (x === 0)
+            return null
+        if (Number.isNaN(x))
+            return null
+        return x
+    }
+    let sheet = [
+        [sheet_name, ...labels],
+        ...data.map(row => [row.label, ...row.datasets.map(correct_value)])
+    ]
+    return xlsx.utils.aoa_to_sheet(sheet)
+}
+
+export function save_charts_to_excel_file(name, labels, charts_data) {
+    let wb = xlsx.utils.book_new()
+    for (let [sheet_name, data] of Object.entries(charts_data)) {
+        let ws = chart_to_excel_sheet(sheet_name, labels, data)
+        xlsx.utils.book_append_sheet(wb, ws, '' + sheet_name)
+    }
+    xlsx.writeFile(wb, `${name}.xlsx`)
+}
+

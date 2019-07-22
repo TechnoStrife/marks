@@ -45,6 +45,9 @@ export function sum(array) {
 }
 
 export function avg(array) {
+    array = array.filter(x => x)
+    if (array.length === 0)
+        return null
     return sum(array) / array.length
 }
 

@@ -1,0 +1,50 @@
+@import "~src/variables";
+
+@media #{$small-and-down} {
+    #charts {
+        padding-left: 0;
+        padding-right: 0;
+        > h5, h6 {
+            padding: 0 0.75rem;
+        }
+    }
+    .chart-card {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+}
+
+.chart-card > :first-child {
+    margin-top: 0;
+}
+
+.card-panel > .row {
+    margin: 0;
+}
+
+.chart {
+    padding-top: 20px;
+}
+
+.chart-filter {
+    margin-left: 20px;
+    display: flex;
+    align-items: center;
+    .filter-title {
+        display: inline-block;
+        margin: 4px;
+    }
+    .range-select {
+        display: inline-flex;
+    }
+}
+.chart-filters {
+    display: flex;
+    justify-content: left;
+    flex-wrap: wrap;
+
+    .chart-filter, .chart-sort {
+        flex: 0 0 auto;
+        margin: 5px 10px 5px 0;
+    }
+}

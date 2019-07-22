@@ -6,6 +6,7 @@
                 :options="options"
                 :label="labels"
                 @chart-click="console.log(arguments)"
+                @export-chart="export_chart"
             >
                 <h6>Успеваемость по предметам</h6>
 
@@ -27,8 +28,8 @@
 <script>
 import ChartCardMulti from "@/charts/ChartCardMulti"
 import RangeSelect from "@/components/RangeSelect"
-import {avg_marks_by_groups, default_options, distinct, round2} from "@/utils/marks"
-import {deep_copy} from "@/utils"
+import {avg_marks_by_groups, default_options, distinct, round2, save_charts_to_excel_file} from "@/utils/marks"
+import {deep_copy, short_name} from "@/utils"
 
 export default {
     name: "TheStudentChartSubject",
@@ -74,7 +75,8 @@ export default {
             return distinct(this.data.marks.marks.map(mark => mark.period.year)).reverse()
         },
         all_periods() {
-            let marks = this.data.marks.marks.filter(mark => mark.period.year === this.selected_year)
+            let selected_year = this.selected_year
+            let marks = this.data.marks.marks.filter(mark => mark.period.year === selected_year)
             return distinct(marks.map(mark => mark.period.num))
         },
         select_period() {
@@ -96,22 +98,27 @@ export default {
             return this.select_period[this.selected_period_index].num
         },
         filtered_marks() {
-            let marks = this.data.marks.marks.filter(mark => mark.period.year === this.selected_year)
-            if (this.selected_period > 0)
-                marks = marks.filter(mark => mark.period.num === this.selected_period)
+            let selected_year = this.selected_year
+            let marks = this.data.marks.marks.filter(mark => mark.period.year === selected_year)
+            let selected_period = this.selected_period
+            if (selected_period > 0)
+                marks = marks.filter(mark => mark.period.num === selected_period)
             return marks
         },
         filtered_semester_marks() {
-            let marks = this.data.marks.semester_marks.filter(mark => mark.period.year === this.selected_year)
-            if (this.selected_period > 0)
-                marks = marks.filter(mark => mark.period.num === this.selected_period)
+            let selected_year = this.selected_year
+            let marks = this.data.marks.semester_marks.filter(mark => mark.period.year === selected_year)
+            let selected_period = this.selected_period
+            if (selected_period > 0)
+                marks = marks.filter(mark => mark.period.num === selected_period)
             return marks
         },
         include_semester_marks() {
             return this.filtered_semester_marks.length > 0
         },
         filtered_terminal_marks() {
-            return this.data.marks.terminal_marks.filter(mark => mark.year === this.selected_year)
+            let selected_year = this.selected_year
+            return this.data.marks.terminal_marks.filter(mark => mark.year === selected_year)
         },
         include_terminal_marks() {
             return this.filtered_terminal_marks.length > 0
@@ -168,7 +175,24 @@ export default {
             })
         },
     },
-    methods: {},
+    methods: {
+        export_chart() {
+            const selected_period_index = this.selected_period_index
+            let charts_data = new Map()
+            for (let [index, name] of this.select_period.entries()) {
+                if (index > 0)
+                    name = name.text
+                this.selected_period_index = index
+                charts_data['' + name] = this.avg_marks
+            }
+            this.selected_period_index = selected_period_index
+            save_charts_to_excel_file(
+                `Успеваемость ${short_name(this.data.full_name)} по предметам`,
+                this.labels,
+                charts_data
+            )
+        }
+    },
 }
 </script>
 

@@ -4,11 +4,13 @@
             <ChartCardMulti
                 :data="avg_marks"
                 :options="options"
-                :label="selected_student"
+                :label="labels"
                 @chart-click="console.log(arguments)"
+                @export-chart="export_chart"
             >
-                <h6>Средняя оценка по ученику</h6>
-                <katex-element :expression="'\\langle X \\rangle = ' + total_avg"/>
+                <h6>Средняя оценка по предмету</h6>
+                <span>Средняя средняя оценка = {{ total_avg[0] }}</span><br>
+                <span>Средняя средняя годовая оценка = {{ total_avg[1] }}</span><br>
                 <template v-slot:filters>
                     <div class="chart-filter left">
                         <div class="filter-title">Ученик:</div>
@@ -27,8 +29,8 @@
 <script>
 import ChartCardMulti from "@/charts/ChartCardMulti"
 import RangeSelect from "@/components/RangeSelect"
-import {avg, deep_copy, short_name} from "@/utils"
-import {avg_marks_by_groups, default_options, round2} from "@/utils/marks"
+import {avg, deep_copy, short_name, transpose_2d} from "@/utils"
+import {avg_marks_by_groups, default_options, round2, save_charts_to_excel_file} from "@/utils/marks"
 
 export default {
     name: "TheClassChartSubjects",
@@ -47,6 +49,10 @@ export default {
             options: deep_copy(default_options),
             selected_student_index: 0,
             console,
+            labels: [
+                'Средняя оценка',
+                'Средняя годовая оценка',
+            ]
         }
     },
     computed: {
@@ -60,11 +66,12 @@ export default {
             return this.all_students[this.selected_student_index]
         },
         filtered_marks() {
+            const selected_student = this.selected_student
             if (this.selected_student_index === 0)
                 return this.data.marks
             else
                 return this.data.marks.filter(
-                    mark => short_name(mark.student.full_name) === this.selected_student
+                    mark => short_name(mark.student.full_name) === selected_student
                 )
         },
         avg_marks() {
@@ -72,19 +79,42 @@ export default {
             let marks_grouped = avg_marks_by_groups(
                 marks,
                 mark => mark.subject.id,
-                this.data.subjects.map(subject => subject.id)
+                this.data.subjects.map(subject => subject.id),
+                [mark => mark.mark, mark => mark.terminal_mark]
             )
-            return Object.entries(marks_grouped).map(([subject_id, mark]) => ({
-                key: subject_id,
-                label: this.data.subjects_map[subject_id].name,
-                datasets: [round2(mark)],
-            }))
+            return Object.entries(marks_grouped).map(
+                ([subject_id, [mark, terminal_mark]]) => ({
+                    key: subject_id,
+                    label: this.data.subjects_map[subject_id].name,
+                    datasets: [
+                        round2(mark || 0),
+                        round2(terminal_mark || 0)
+                    ],
+                })
+            )
         },
         total_avg() {
-            return round2(avg(this.avg_marks.map(x => x.datasets[0]).filter(x => x > 0)))
+            let datasets = transpose_2d(this.avg_marks.map(x => x.datasets))
+            // datasets = datasets.filter(x => x !== 0)
+            return datasets.map(x => round2(avg(x)))
         },
     },
-    methods: {},
+    methods: {
+        export_chart() {
+            const selected_student_index = this.selected_student_index
+            let charts_data = new Map()
+            for (let [index, name] of this.all_students.entries()) {
+                this.selected_student_index = index
+                charts_data['' + name] = this.avg_marks
+            }
+            this.selected_student_index = selected_student_index
+            save_charts_to_excel_file(
+                `Успеваемость ${this.data.name} по предметам`,
+                [this.selected_student],
+                charts_data
+            )
+        }
+    },
 }
 </script>
 

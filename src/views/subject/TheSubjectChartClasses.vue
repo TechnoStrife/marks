@@ -1,18 +1,14 @@
 <template>
-    <div id="subject-chart-classes">
+    <div id="subject-chart-classes" class="row">
         <div class="col s12">
             <ChartCardMulti
                 :data="avg_marks"
                 :options="options"
-                :label="[
-                    'Средняя оценка',
-                    'Средняя годовая оценка',
-                    'Завышение оценки',
-                    'Занижение оценки',
-                ]"
+                :label="labels"
                 :draw_avg="false"
                 :stacks="{2: 0, 3: 1}"
                 @chart-click="console.log(arguments)"
+                @export-chart="export_chart"
             >
                 <h6>Средняя оценка по классу</h6>
                 <span>Средняя средняя оценка = {{ total_avg[0] }}</span><br>
@@ -36,7 +32,7 @@
 import ChartCardMulti from "@/charts/ChartCardMulti"
 import RangeSelect from "@/components/RangeSelect"
 import {avg, deep_copy, transpose_2d} from "@/utils"
-import {avg_marks_by_groups, default_options, distinct, get_mark, round2} from "@/utils/marks"
+import {avg_marks_by_groups, default_options, distinct, round2, save_charts_to_excel_file} from "@/utils/marks"
 
 export default {
     name: "TheSubjectChartClasses",
@@ -55,6 +51,12 @@ export default {
             options: deep_copy(default_options),
             selected_year_index: 0,
             console,
+            labels: [
+                'Средняя оценка',
+                'Средняя годовая оценка',
+                'Завышение оценки',
+                'Занижение оценки',
+            ]
         }
     },
     computed: {
@@ -65,45 +67,63 @@ export default {
             return this.all_years[this.selected_year_index]
         },
         filtered_marks() {
+            let selected_year = this.selected_year
             return this.data.marks.filter(
-                mark => mark.class.year === this.selected_year
+                mark => mark.class.year === selected_year
             )
         },
         filtered_classes() {
-            return this.data.classes.filter(class_ => class_.year === this.selected_year)
+            let selected_year = this.selected_year
+            return this.data.classes.filter(
+                class_ => class_.year === selected_year
+                    && this.data.marks.find(mark => mark.class.id === class_.id) !== undefined
+            )
         },
         avg_marks() {
             let marks = this.filtered_marks
             let marks_grouped = avg_marks_by_groups(
                 marks,
                 mark => mark.class.id,
-                this.filtered_classes.map(class_ => class_.id)
+                this.filtered_classes.map(class_ => class_.id),
+                [mark => mark.mark, mark => mark.terminal_mark, mark => mark.diff]
             )
-            return Object.entries(marks_grouped).map(([class_id, mark]) => {
-                let terminal_mark = this.data.terminal_marks.find(
-                    mark => mark.class.id === parseInt(class_id)
-                )
-                terminal_mark = get_mark(terminal_mark)
-                return {
+            return Object.entries(marks_grouped).map(
+                ([class_id, [mark, terminal_mark, diff]]) => ({
                     key: class_id,
                     label: this.data.classes_map[class_id].name,
                     datasets: [
-                        round2(mark),
-                        round2(terminal_mark),
-                        mark && terminal_mark ? Math.max(round2(terminal_mark - mark), 0) : 0,
-                        mark && terminal_mark ? -Math.min(round2(terminal_mark - mark), 0) : 0,
+                        round2(mark || 0),
+                        round2(terminal_mark || 0),
+                        Math.max(round2(diff || 0), 0),
+                        -Math.min(round2(diff || 0), 0),
                     ],
-                }
-            })
+                })
+            )
         },
         total_avg() {
-            let datasets = transpose_2d(this.avg_marks.map(
-                x => [x.datasets[0], x.datasets[1], x.datasets[2] - x.datasets[3]]
+            let datasets = transpose_2d(this.avg_marks.map(x => x.datasets).map(
+                x => [x[0], x[1], x[2] - x[3]]
             ))
-            return datasets.map(x => round2(avg(x.filter(x => x !== 0))))
+            // datasets = datasets.filter(x => x !== 0)
+            return datasets.map(x => round2(avg(x)))
         },
     },
-    methods: {},
+    methods: {
+        export_chart() {
+            const selected_year_index = this.selected_year_index
+            let charts_data = new Map()
+            for (let [index, name] of this.all_years.entries()) {
+                this.selected_year_index = index
+                charts_data['' + name] = this.avg_marks
+            }
+            this.selected_year_index = selected_year_index
+            save_charts_to_excel_file(
+                `Успеваемость по ${this.data.name} по классам`,
+                this.labels,
+                charts_data
+            )
+        }
+    },
 }
 </script>
 

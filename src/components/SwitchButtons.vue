@@ -7,6 +7,7 @@
                 selected: index === selected,
                 'waves-effect': waves
             }"
+            class="hover-highlight"
             :style="{color: option.color}"
             @click="$emit('switch', index)"
             v-html="option.text"
@@ -73,17 +74,6 @@ export default {
         border: none;
         height: 100%;
 
-        &:after {
-            content: '';
-            position: absolute;
-            left: 0;
-            right: 0;
-            top: 0;
-            bottom: 0;
-        }
-        &:hover:after {
-            background-color: rgba(0, 0, 0, 0.04);
-        }
         &:not(.waves-effect):active:after {
             background-color: rgba(0, 0, 0, 0.08);
         }

@@ -77,7 +77,8 @@ export default {
                 return this.all_years[1]
         },
         filtered_marks() {
-            return this.data.marks.marks.filter(mark => mark.period.year === this.selected_year)
+            let selected_year = this.selected_year
+            return this.data.marks.marks.filter(mark => mark.period.year === selected_year)
         },
         avg_marks() {
             let marks = this.filtered_marks

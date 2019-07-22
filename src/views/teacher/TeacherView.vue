@@ -7,7 +7,7 @@
                 <TheTeacherDescription :teacher="data"/>
             </div>
         </div>
-        <div class="col s12 m7 l8">
+        <div id="charts" class="col s12 m7 l8">
             <div class="row">
                 <div class="col s12">
                     Charts here

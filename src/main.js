@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import VueKatex from 'vue-katex/dist/vue-katex.min'
 import Chart from 'chart.js'
+import 'font_awesome'
 import * as LosslessJSON from 'lossless-json'
 import router from './router'
 import store, {store as store_scheme} from './store'

@@ -7,6 +7,7 @@
                 :label="labels"
                 :sort="false"
                 @chart-click="console.log(arguments)"
+                @export-chart="export_chart"
             >
                 <h6>Успеваемость в течение года</h6>
                 <template v-slot:filters>
@@ -34,8 +35,15 @@
 <script>
 import ChartCardMulti from "@/charts/ChartCardMulti"
 import RangeSelect from "@/components/RangeSelect"
-import {avg_marks_by_groups, default_options, distinct, get_mark, round2} from "@/utils/marks"
-import {avg, deep_copy} from "@/utils"
+import {
+    avg_marks_by_groups,
+    default_options,
+    distinct,
+    get_mark,
+    round2,
+    save_charts_to_excel_file
+} from "@/utils/marks"
+import {avg, deep_copy, short_name} from "@/utils"
 
 export default {
     name: "TheStudentChartPeriod",
@@ -54,6 +62,7 @@ export default {
             options: deep_copy(default_options),
             selected_year_index: 0,
             selected_subject_index: 0,
+            labels: ['Средняя оценка', 'Итоговая']
         }
     },
     watch: {
@@ -62,9 +71,6 @@ export default {
         }
     },
     computed: {
-        labels() {
-            return ['Средняя оценка', 'Итоговая']
-        },
         all_years() {
             return distinct(this.data.marks.marks.map(mark => mark.period.year)).reverse()
         },
@@ -100,23 +106,30 @@ export default {
             return this.data.marks.subjects[subject_id]
         },
         filtered_marks() {
+            let selected_year = this.selected_year
             let marks = this.data.marks.marks.filter(
-                mark => mark.period.year === this.selected_year
+                mark => mark.period.year === selected_year
                     && mark.mark
             )
-            if (this.selected_subject !== null)
-                marks = marks.filter(mark => mark.subject.id === this.selected_subject.id)
+            if (this.selected_subject !== null) {
+                let subject_id = this.selected_subject.id
+                marks = marks.filter(mark => mark.subject.id === subject_id)
+            }
             return marks
         },
         filtered_semester_marks() {
             let marks = this.data.marks.semester_marks.filter(
                 mark => mark.period.year === this.selected_year
             )
-            if (this.selected_subject !== null)
-                marks = marks.filter(mark => mark.subject.id === this.selected_subject.id)
+            if (this.selected_subject !== null) {
+                let subject_id = this.selected_subject.id
+                marks = marks.filter(mark => mark.subject.id === subject_id)
+            }
             return marks
         },
         avg_marks() {
+            const selected_year = this.selected_year
+            const selected_subject_id = this.selected_subject.id
             let marks = this.filtered_marks
             let classes = [this.data.class, ...this.data.previous_classes]
             let class_ = classes[this.selected_year_index]
@@ -128,9 +141,9 @@ export default {
             )
             let data = Object.entries(marks_grouped).map(([period_num, mark]) => {
                 let semester_mark = this.data.marks.semester_marks.find(
-                    mark => mark.period.year === this.selected_year
+                    mark => mark.period.year === selected_year
                         && mark.period.num === parseInt(period_num)
-                        && mark.subject.id === this.selected_subject.id
+                        && mark.subject.id === selected_subject_id
                 )
                 if (semester_mark === undefined)
                     semester_mark = 0
@@ -146,8 +159,8 @@ export default {
                 }
             })
             let terminal_mark = get_mark(this.data.marks.terminal_marks.find(
-                mark => mark.year === this.selected_year
-                    && mark.subject.id === this.selected_subject.id
+                mark => mark.year === selected_year
+                    && mark.subject.id === selected_subject_id
                     && mark.type === 1
             ))
             data.push({
@@ -160,8 +173,8 @@ export default {
             })
             if ([9, 11].includes(class_.num)) {
                 let exam_mark = get_mark(this.data.marks.terminal_marks.find(
-                    mark => mark.year === this.selected_year
-                        && mark.subject.id === this.selected_subject.id
+                    mark => mark.year === selected_year
+                        && mark.subject.id === selected_subject_id
                         && mark.type === 2
                 ))
                 data.push({
@@ -170,8 +183,8 @@ export default {
                     datasets: [undefined, exam_mark,],
                 })
                 let final_mark = get_mark(this.data.marks.terminal_marks.find(
-                    mark => mark.year === this.selected_year
-                        && mark.subject.id === this.selected_subject.id
+                    mark => mark.year === selected_year
+                        && mark.subject.id === selected_subject_id
                         && mark.type === 3
                 ))
                 data.push({
@@ -183,7 +196,22 @@ export default {
             return data
         },
     },
-    methods: {},
+    methods: {
+        export_chart() {
+            const selected_subject_index = this.selected_subject_index
+            let charts_data = new Map()
+            for (let [index, id] of this.all_subjects.entries()) {
+                this.selected_subject_index = index
+                charts_data[this.data.marks.subjects[id].name] = this.avg_marks
+            }
+            this.selected_subject_index = selected_subject_index
+            save_charts_to_excel_file(
+                `Успеваемость ${short_name(this.data.full_name)} в течение года`,
+                this.labels,
+                charts_data
+            )
+        }
+    },
 }
 </script>
 

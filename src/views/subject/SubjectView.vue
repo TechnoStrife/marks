@@ -5,12 +5,12 @@
                 <TheSubjectDescription :data="data"/>
             </div>
         </div>
-        <div class="col s12 m7 l8">
+        <div id="charts" class="col s12 m7 l8">
             <h5>Успеваемость</h5>
             <div class="row">
                 <div class="col s12">
                     <TheSubjectChartClasses :data="data"/>
-                    <TheSubjectChartTeachers :data="data"/>
+                    <TheSubjectChartTeachers :data="data" v-if="data.teachers.length > 1"/>
                 </div>
             </div>
         </div>
@@ -38,15 +38,15 @@ export default {
     computed: {},
     methods: {
         transform_response(data) {
-            let {marks, terminal_marks, classes, teachers} = data
+            let {marks, classes, teachers} = data
             classes = id_map(classes)
             teachers = id_map(teachers)
-            for (let mark of [...marks, ...terminal_marks]) {
+            for (let mark of marks) {
                 mark.teacher = teachers[mark.teacher]
                 mark.class = classes[mark.class]
             }
             data.marks = marks
-            data.terminal_marks = terminal_marks
+            // data.terminal_marks = terminal_marks
             data.classes_map = classes
             data.teachers_map = teachers
             return data

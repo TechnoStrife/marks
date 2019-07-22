@@ -1,8 +1,8 @@
 from collections import namedtuple
-from typing import List
+from typing import List, Union
 
 from django.contrib.auth.models import User
-from django.db.models import Avg, Q, CharField
+from django.db.models import Avg, Q, CharField, FloatField, ExpressionWrapper as Expr, F
 from django.db.models.functions import Length, Substr
 from rest_framework import viewsets
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin
@@ -14,6 +14,7 @@ from api.related_serializer import RelatedSerializerCollector, RelatedSerializer
 from api.serializers import *
 from dnevnik.support import timer
 from main.models import Class, Student, Mark, Subject, Teacher, Period, SemesterMark, TerminalMark
+from main.summary.models import AvgMark
 
 __all__ = [
     'UserViewSet',
@@ -24,6 +25,13 @@ __all__ = [
     'SubjectViewSet',
     'StudentViewSet',
 ]
+
+
+def round_none(number: Union[None, float], n_digits: int = None):
+    if number is None:
+        return number
+    return round(number, n_digits)
+
 
 CLASSES_COLLECTOR = RelatedSerializerCollector(
     model=Class,
@@ -148,16 +156,22 @@ class ClassViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMixin, Generic
         data['vertical_classes'] = ClassBasicSerializer(vertical_classes, many=True).data
         students = instance.get_students().order_by('full_name')
         data['students'] = StudentBasicSerializer(students, many=True).data
-        marks = Mark.objects.filter(lesson_info__klass=instance) \
-            .values('student', 'lesson_info__subject') \
-            .annotate(mark=Avg('mark'))
-        for mark in marks:
-            mark['subject'] = mark.pop('lesson_info__subject')
-            if mark['mark'] is not None:
-                mark['mark'] = round(mark['mark'], 2)
+        marks = AvgMark.objects.filter(lesson__klass=instance).prefetch_related('lesson')
+        marks = [
+            {
+                'mark': round(mark.mark, 2),
+                'terminal_mark': mark.terminal_mark,
+                'student': mark.student_id,
+                'subject': mark.lesson.subject_id,
+                'teacher': mark.lesson.teacher_id
+            }
+            for mark in marks
+        ]
         subjects = Subject.objects.filter(id__in=(mark['subject'] for mark in marks))
         data['subjects'] = SubjectSerializer(subjects, many=True).data
-        data['marks'] = list(marks)
+        teachers = Teacher.objects.filter(id__in=(mark['teacher'] for mark in marks))
+        data['teachers'] = TeacherBasicSerializer(teachers, many=True).data
+        data['marks'] = marks
         return Response(data)
 
 
@@ -178,44 +192,19 @@ class SubjectViewSet(ModelViewSet, metaclass=DefaultQuerySet):
         classes = Class.objects.filter(lesson__subject=instance).distinct()
         data['classes'] = ClassBasicSerializer(classes, many=True).data
 
-        marks = Mark.objects.filter(lesson_info__subject=instance) \
-            .values('lesson_info__teacher', 'lesson_info__klass') \
-            .annotate(mark=Avg('mark'))
-        terminal_marks = TerminalMark.objects.filter(lesson_info__subject=instance) \
-            .values('lesson_info__teacher', 'lesson_info__klass') \
-            .annotate(mark=Avg('mark'))
-        data['marks'] = list(marks)
-        data['terminal_marks'] = list(terminal_marks)
-        for mark in [*marks, *terminal_marks]:
-            mark['class'] = mark.pop('lesson_info__klass')
-            mark['teacher'] = mark.pop('lesson_info__teacher')
-            if mark['mark'] is not None:
-                mark['mark'] = round(mark['mark'], 2)
-        assert all(mark['class'] in (klass.id for klass in classes)
-                   for mark in [*marks, *terminal_marks])
-        assert all(mark['teacher'] in (teacher.id for teacher in teachers)
-                   for mark in [*marks, *terminal_marks])
-        correct_overstating = """SELECT AVG(diff) overstating, class_id, klass, teacher_id, teacher
-            FROM (
-                SELECT terminal.mark - AVG(mark.mark) diff,
-                    lesson.klass_id                class_id,
-                    class.name                     klass,
-                    lesson.teacher_id,
-                    teacher.full_name              teacher,
-                    mark.student_id,
-                    student.full_name              student
-                FROM main_mark mark
-                    INNER JOIN main_lesson lesson ON mark.lesson_info_id = lesson.id
-                    INNER JOIN main_class class ON lesson.klass_id = class.id
-                    INNER JOIN main_teacher teacher ON lesson.teacher_id = teacher.id
-                    INNER JOIN main_student student ON mark.student_id = student.id
-                    INNER JOIN main_terminalmark terminal
-                        ON mark.lesson_info_id = terminal.lesson_info_id
-                            AND mark.student_id = terminal.student_id
-                WHERE lesson.subject_id = %s
-                GROUP BY class.id, teacher.id, student.id
-                )
-            GROUP BY class_id, teacher_id"""
+        marks = AvgMark.objects.filter(lesson__subject=instance)
+        marks = marks.values('lesson__teacher', 'lesson__klass').annotate(
+            diff=Avg(Expr(F('terminal_mark') - F('mark'), output_field=FloatField())),
+            mark=Avg('mark'),
+            terminal_mark=Avg('terminal_mark'),
+        ).filter(mark__isnull=False, terminal_mark__isnull=False)
+        marks = list(marks)
+        for mark in marks:
+            mark['class'] = mark.pop('lesson__klass')
+            mark['teacher'] = mark.pop('lesson__teacher')
+        data['marks'] = marks
+        assert all(mark['class'] in (klass.id for klass in classes) for mark in marks)
+        assert all(mark['teacher'] in (teacher.id for teacher in teachers) for mark in marks)
         return Response(data)
 
 

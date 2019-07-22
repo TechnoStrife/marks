@@ -13,7 +13,7 @@ else
 export function transform_value(key, value) {
     const date_keys = ['birthday', 'date', 'entered', 'leaved']
     const preserve_keys = ['dnevnik_id', 'dnevnik_person_id']
-    const lose_precision_keys = ['avg', 'avg_mark']
+    const lose_precision_keys = ['avg', 'avg_mark', 'mark', 'terminal_mark', 'diff']
 
     if (value && date_keys.includes(key))
         return new Date(value)
@@ -24,7 +24,7 @@ export function transform_value(key, value) {
     if (preserve_keys.includes(key))
         return value
 
-    if (lose_precision_keys.includes(key))
+    if (lose_precision_keys.includes(key) && /^[+-]?\d+\.\d+(e[+-]\d+)?$/.test(value.value))
         return parseFloat(value.value)
 
     return value.valueOf()

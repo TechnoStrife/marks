@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'django.contrib.staticfiles',
     'main',
+    'main.summary',
     'frontend',
     'api',
     'dnevnik'

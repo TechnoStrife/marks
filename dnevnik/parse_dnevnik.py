@@ -4,6 +4,7 @@ from typing import Dict, List
 import django
 
 from dnevnik.settings import current_year
+from main import summary
 
 django.setup()
 
@@ -11,6 +12,7 @@ from dnevnik.support import timer, remove_equal_items, login
 from dnevnik.pages import *
 from dnevnik.fetch_queue import FetchQueueProcessor
 from main.models import *
+from main.summary.models import AvgMark
 
 
 def get_active_periods(fetch_queue: FetchQueueProcessor, classes: List[Class]) -> Dict[Class, Period]:
@@ -56,6 +58,8 @@ def initial_scan(fetch_queue: FetchQueueProcessor):
     LessonPage.scan_all(fetch_queue, Lesson.objects.all(), save=True)
     print('summary marks')
     SummaryPage.scan_all(fetch_queue, Lesson.objects.all(), save=True)
+
+    summary.models.synchronize()
 
 
 def everyday_scan(fetch_queue: FetchQueueProcessor):
@@ -104,6 +108,8 @@ def everyday_scan(fetch_queue: FetchQueueProcessor):
     )
     print()
     print(len(insert_marks), 'new marks')
+
+    summary.models.synchronize()
 
 
 def extract_and_save_marks(pages, mark_type, page_marks, custom_filter):
