@@ -14,7 +14,11 @@ Chart.plugins.register(require('chartjs-plugin-annotation'))
 
 
 Vue.use(VueKatex)
-Vue.config.productionTip = false
+
+
+if (process.env.NODE_ENV !== 'production') {
+    Vue.config.productionTip = false
+}
 
 new Vue({
     el: '#app',

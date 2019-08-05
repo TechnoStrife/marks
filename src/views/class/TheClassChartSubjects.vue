@@ -119,7 +119,7 @@ export default {
 </script>
 
 <style lang="scss">
-#class-chart-students {
+#class-chart-subjects {
 
 }
 </style>

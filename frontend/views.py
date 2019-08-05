@@ -8,7 +8,7 @@ from main.models import Class, Teacher, Subject
 from main.models_extensions import Concat
 
 
-def test(request):
+def test(request, url=None):
     teachers = Teacher.objects.all() \
         .annotate(
         lesson_count=Count('lesson'),

@@ -54,9 +54,10 @@ class Class(Model):
                               null=True, related_name='head_in_classes')
     year = SmallIntegerField(verbose_name='Уч. год')
     dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True)
-    periods_count = SmallIntegerField(verbose_name='Количество учебных периодов', null=True)  # TODO delete?
+    periods_count = SmallIntegerField(verbose_name='Количество учебных периодов', null=True)
     final_class = ForeignKey('self', verbose_name='Конечный класс', on_delete=SET_NULL, null=True)
-    periods = ManyToManyField(Period, db_table='class_periods', verbose_name='Семестры', related_name='+')
+    periods = ManyToManyField(Period, db_table='class_periods',
+                              verbose_name='Семестры', related_name='+')
 
     def __str__(self):
         return self.name + ' класс'
@@ -111,7 +112,8 @@ class Subject(Model):
 class Student(PersonModel):
     info = CharField(max_length=4096, verbose_name='Примечания', null=True)
 
-    klass = ForeignKey(Class, verbose_name='Класс', on_delete=CASCADE, null=True, related_name='students')
+    klass = ForeignKey(Class, verbose_name='Класс', on_delete=CASCADE,
+                       null=True, related_name='students')
     previous_classes = ManyToManyField(Class, db_table='students_previous_classes',
                                        verbose_name='Предыдущие классы', related_name='previous_students')
 

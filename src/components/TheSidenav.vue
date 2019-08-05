@@ -13,6 +13,7 @@
                            :title="flyout.title"
                            :icon="flyout.icon"
                            :contents="flyout.contents"
+                           :summary="flyout.summary"
                            :active="flyout.active"
                            @open="open_flyout(index)"/>
             <li>
@@ -94,18 +95,30 @@ function flyouts(data) {
             title: 'Классы',
             icon: 'school',
             active: false,
+            summary: {
+                text: 'Сводка по классам',
+                link: '/summary/classes/',
+            },
             contents: classes
         },
         {
             title: 'Предметы',
             icon: 'subject',
             active: false,
+            summary: {
+                text: 'Сводка по предметам',
+                link: '/summary/subjects/',
+            },
             contents: subjects
         },
         {
             title: 'Учителя',
             icon: 'person',
             active: false,
+            summary: {
+                text: 'Сводка по учителям',
+                link: '/summary/teachers',
+            },
             contents: teachers
         },
     ]

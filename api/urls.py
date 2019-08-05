@@ -3,6 +3,7 @@ from rest_framework import routers
 from rest_framework.schemas import get_schema_view
 
 from api import views
+from api.summary.urls import router as summary_router
 
 router = routers.DefaultRouter()
 router.register('user', views.UserViewSet)
@@ -21,5 +22,6 @@ urlpatterns = [
     path('summary/', include('api.summary.urls')),
     path('auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('schema/', schema_view),
+    path('summary/', include(summary_router.urls)),
     path('', include(router.urls)),
 ]

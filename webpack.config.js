@@ -3,7 +3,8 @@ const VueLoaderPlugin = require('vue-loader/lib/plugin');
 const BundleTracker = require('webpack-bundle-tracker');
 const WriteFilePlugin = require('write-file-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+// const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin')
 // const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
 
 // const vue_style_loader = process.env.NODE_ENV !== 'production'
@@ -156,12 +157,33 @@ if (process.env.NODE_ENV === 'production') {
     module.exports.optimization = {
         minimize: true,
         minimizer: [
-            new UglifyJsPlugin({
+            // new UglifyJsPlugin({
+            //     parallel: true,
+            //     uglifyOptions: {
+            //         mangle: true,
+            //         output: {
+            //             comments: false
+            //         },
+            //         compress: {
+            //             sequences: true,
+            //             dead_code: true,
+            //             conditionals: true,
+            //             booleans: true,
+            //             unused: true,
+            //             if_return: true,
+            //             join_vars: true,
+            //             drop_console: true
+            //         },
+            //         ecma: 6,
+            //     },
+            //     sourceMap: true
+            // }),
+            new TerserPlugin({
                 parallel: true,
-                uglifyOptions: {
-                    mangle: true,
+                sourceMap: true,
+                terserOptions: {
                     output: {
-                        comments: false
+                        comments: false,
                     },
                     compress: {
                         sequences: true,
@@ -174,9 +196,15 @@ if (process.env.NODE_ENV === 'production') {
                         drop_console: true
                     },
                     ecma: 6,
+                    mangle: true,
+                    module: false,
+                    toplevel: false,
+                    nameCache: null,
+                    ie8: false,
+                    keep_fnames: true,
+                    safari10: false,
                 },
-                sourceMap: true
-            })
+            }),
         ]
     }
 }

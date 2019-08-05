@@ -2,7 +2,7 @@ from collections import namedtuple
 from typing import List, Union
 
 from django.contrib.auth.models import User
-from django.db.models import Avg, Q, CharField, FloatField, ExpressionWrapper as Expr, F
+from django.db.models import Q, CharField
 from django.db.models.functions import Length, Substr
 from rest_framework import viewsets
 from rest_framework.mixins import ListModelMixin, RetrieveModelMixin, UpdateModelMixin
@@ -12,11 +12,13 @@ from rest_framework.viewsets import GenericViewSet, ReadOnlyModelViewSet
 
 from api.related_serializer import RelatedSerializerCollector, RelatedSerializer, RelatedTarget
 from api.serializers import *
-from dnevnik.support import timer
+from api.summary.serializers import AvgMarkBasicSerializer
 from main.models import Class, Student, Mark, Subject, Teacher, Period, SemesterMark, TerminalMark
 from main.summary.models import AvgMark
 
 __all__ = [
+    'ModelViewSet',
+    'DefaultQuerySet',
     'UserViewSet',
     'PeriodViewSet',
     'TeacherViewSet',
@@ -118,6 +120,15 @@ class TeacherViewSet(ModelViewSet, metaclass=DefaultQuerySet):
         data['subjects'] = SubjectSerializer(subjects, many=True).data
         classes = Class.objects.filter(lesson__teacher=instance).distinct()
         data['classes'] = ClassBasicSerializer(classes, many=True).data
+        marks = AvgMark.objects.filter(lesson__teacher=instance)
+        data['marks'] = AvgMarkBasicSerializer(marks, many=True).data
+        # marks = marks.annotate(subject=F('lesson__subject'), **{'class': F('lesson__klass')})
+        # marks = marks.values('class', 'subject').annotate(
+        #     diff=Avg(Expr(F('terminal_mark') - F('mark'), output_field=FloatField())),
+        #     mark=Avg('mark'),
+        #     terminal_mark=Avg('terminal_mark'),
+        # ).filter(mark__isnull=False, terminal_mark__isnull=False)
+        # data['marks'] = list(marks)
         return Response(data)
 
 
@@ -157,21 +168,11 @@ class ClassViewSet(ListModelMixin, RetrieveModelMixin, UpdateModelMixin, Generic
         students = instance.get_students().order_by('full_name')
         data['students'] = StudentBasicSerializer(students, many=True).data
         marks = AvgMark.objects.filter(lesson__klass=instance).prefetch_related('lesson')
-        marks = [
-            {
-                'mark': round(mark.mark, 2),
-                'terminal_mark': mark.terminal_mark,
-                'student': mark.student_id,
-                'subject': mark.lesson.subject_id,
-                'teacher': mark.lesson.teacher_id
-            }
-            for mark in marks
-        ]
+        data['marks'] = marks = AvgMarkBasicSerializer(marks, many=True).data
         subjects = Subject.objects.filter(id__in=(mark['subject'] for mark in marks))
         data['subjects'] = SubjectSerializer(subjects, many=True).data
         teachers = Teacher.objects.filter(id__in=(mark['teacher'] for mark in marks))
         data['teachers'] = TeacherBasicSerializer(teachers, many=True).data
-        data['marks'] = marks
         return Response(data)
 
 
@@ -183,7 +184,6 @@ class SubjectViewSet(ModelViewSet, metaclass=DefaultQuerySet):
     serializer_class = SubjectSerializer
     queryset = Subject.objects.all()
 
-    @timer('time', after=True)
     def retrieve(self, request, *args, **kwargs):
         instance: Subject = self.get_object()
         data = SubjectSerializer(instance).data
@@ -193,16 +193,18 @@ class SubjectViewSet(ModelViewSet, metaclass=DefaultQuerySet):
         data['classes'] = ClassBasicSerializer(classes, many=True).data
 
         marks = AvgMark.objects.filter(lesson__subject=instance)
-        marks = marks.values('lesson__teacher', 'lesson__klass').annotate(
-            diff=Avg(Expr(F('terminal_mark') - F('mark'), output_field=FloatField())),
-            mark=Avg('mark'),
-            terminal_mark=Avg('terminal_mark'),
-        ).filter(mark__isnull=False, terminal_mark__isnull=False)
-        marks = list(marks)
-        for mark in marks:
-            mark['class'] = mark.pop('lesson__klass')
-            mark['teacher'] = mark.pop('lesson__teacher')
-        data['marks'] = marks
+        data['marks'] = marks = AvgMarkBasicSerializer(marks, many=True).data
+        # marks = marks.values('lesson__teacher', 'lesson__klass').annotate(
+        #     diff=Avg(Expr(F('terminal_mark') - F('mark'), output_field=FloatField())),
+        #     mark=Avg('mark'),
+        #     terminal_mark=Avg('terminal_mark'),
+        # ).filter(mark__isnull=False, terminal_mark__isnull=False)
+        # marks = list(marks)
+        # for mark in marks:
+        #     mark['class'] = mark.pop('lesson__klass')
+        #     mark['teacher'] = mark.pop('lesson__teacher')
+        # data['marks'] = marks
+
         assert all(mark['class'] in (klass.id for klass in classes) for mark in marks)
         assert all(mark['teacher'] in (teacher.id for teacher in teachers) for mark in marks)
         return Response(data)

@@ -1,5 +1,5 @@
 <template>
-    <div id="subject-chart-classes" class="row">
+    <div id="subject-chart-classes" class="row" v-if="all_years.length > 0">
         <div class="col s12">
             <ChartCardMulti
                 :data="avg_marks"
@@ -61,7 +61,9 @@ export default {
     },
     computed: {
         all_years() {
-            return distinct(this.data.classes.map(class_ => class_.year)).reverse()
+            return distinct(this.data.classes.map(class_ => class_.year)).reverse().filter(
+                year => this.data.marks.find(mark => mark.class.year === year) !== undefined
+            )
         },
         selected_year() {
             return this.all_years[this.selected_year_index]
@@ -85,7 +87,11 @@ export default {
                 marks,
                 mark => mark.class.id,
                 this.filtered_classes.map(class_ => class_.id),
-                [mark => mark.mark, mark => mark.terminal_mark, mark => mark.diff]
+                [
+                    mark => mark.mark,
+                    mark => mark.terminal_mark,
+                    mark => mark.mark && mark.terminal_mark && mark.terminal_mark - mark.mark
+                ]
             )
             return Object.entries(marks_grouped).map(
                 ([class_id, [mark, terminal_mark, diff]]) => ({
@@ -128,7 +134,7 @@ export default {
 </script>
 
 <style lang="scss">
-#class-chart-students {
+#subject-chart-classes {
 
 }
 </style>

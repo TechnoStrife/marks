@@ -1,5 +1,5 @@
 <template>
-    <div id="subject-chart-teachers" class="row" v-if="all_years.length > 0">
+    <div id="teacher-chart-subjects" class="row" v-if="all_years.length > 0">
         <div class="col s12">
             <ChartCardMulti
                 :data="avg_marks"
@@ -35,7 +35,7 @@ import {avg, deep_copy, short_name, transpose_2d} from "@/utils"
 import {avg_marks_by_groups, default_options, distinct, round2, save_charts_to_excel_file} from "@/utils/marks"
 
 export default {
-    name: "TheSubjectChartTeachers",
+    name: "TheTeacherChartSubjects",
     components: {
         ChartCardMulti,
         RangeSelect,
@@ -74,17 +74,17 @@ export default {
                 mark => mark.class.year === selected_year
             )
         },
-        filtered_teachers() {
-            return this.data.teachers.filter(teacher => !!this.filtered_marks.find(
-                mark => mark.teacher.id === teacher.id
+        filtered_subjects() {
+            return this.data.subjects.filter(subject => !!this.filtered_marks.find(
+                mark => mark.subject.id === subject.id
             ))
         },
         avg_marks() {
             let marks = this.filtered_marks
             let marks_grouped = avg_marks_by_groups(
                 marks,
-                mark => mark.teacher.id,
-                this.filtered_teachers.map(teacher => teacher.id),
+                mark => mark.subject.id,
+                this.filtered_subjects.map(subject => subject.id),
                 [
                     mark => mark.mark,
                     mark => mark.terminal_mark,
@@ -92,9 +92,9 @@ export default {
                 ]
             )
             return Object.entries(marks_grouped).map(
-                ([teacher_id, [mark, terminal_mark, diff]]) => ({
-                    key: teacher_id,
-                    label: short_name(this.data.teachers_map[teacher_id].full_name),
+                ([subject_id, [mark, terminal_mark, diff]]) => ({
+                    key: subject_id,
+                    label: this.data.subjects_map[subject_id].name,
                     datasets: [
                         round2(mark || 0),
                         round2(terminal_mark || 0),
@@ -122,7 +122,7 @@ export default {
             }
             this.selected_year_index = selected_year_index
             save_charts_to_excel_file(
-                `Успеваемость по ${this.data.name} по учителям`,
+                `Успеваемость у ${short_name(this.data.full_name)} по предметам`,
                 this.labels,
                 charts_data
             )
@@ -132,7 +132,7 @@ export default {
 </script>
 
 <style lang="scss">
-#subject-chart-teachers {
+#teacher-chart-subjects {
 
 }
 </style>

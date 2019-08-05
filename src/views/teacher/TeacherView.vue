@@ -8,9 +8,11 @@
             </div>
         </div>
         <div id="charts" class="col s12 m7 l8">
+            <h5>Успеваемость</h5>
             <div class="row">
                 <div class="col s12">
-                    Charts here
+                    <TheTeacherChartClasses :data="data"/>
+                    <TheTeacherChartSubjects :data="data"/>
                 </div>
             </div>
         </div>
@@ -21,11 +23,16 @@
 import BaseViewMixin from "@/mixins/BaseViewMixin"
 import TheTeacherDescription from "@/views/teacher/TheTeacherDescription"
 import NoteField from "@/components/NoteField"
+import {id_map} from "@/utils"
+import TheTeacherChartClasses from "@/views/teacher/TheTeacherChartClasses"
+import TheTeacherChartSubjects from "@/views/teacher/TheTeacherChartSubjects"
 
 export default {
     name: "TeacherView",
     mixins: [BaseViewMixin],
     components: {
+        TheTeacherChartSubjects,
+        TheTeacherChartClasses,
         TheTeacherDescription,
         NoteField,
     },
@@ -33,7 +40,22 @@ export default {
         return {}
     },
     computed: {},
-    methods: {},
+    methods: {
+        transform_response(data) {
+            let {marks, classes, subjects} = data
+            classes = id_map(classes)
+            subjects = id_map(subjects)
+            for (let mark of marks) {
+                mark.subject = subjects[mark.subject]
+                mark.class = classes[mark.class]
+            }
+            data.marks = marks
+            // data.terminal_marks = terminal_marks
+            data.classes_map = classes
+            data.subjects_map = subjects
+            return data
+        }
+    },
 }
 </script>
 

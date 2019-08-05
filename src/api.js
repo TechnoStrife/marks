@@ -55,6 +55,8 @@ export class Api {
         this.loading = true
         this.error = false
         this.wrong = false
+        if (url.length > 0 && url[url.length - 1] !== '/')
+            url += '/'
         try {
             let res = await axios({
                 method: data ? 'post' : 'get',

@@ -57,6 +57,8 @@ export function chunk(arr, length) {
 }
 
 export function transpose_2d(array) {
+    if (array.length === 0)
+        return []
     return array[0].map((_, i) => array.map(row => row[i]))
 }
 
@@ -179,4 +181,15 @@ export function key_sorter(key) {
             return a.localeCompare(b)
         return a - b
     }
+}
+
+export function group_by(arr, get_key) {
+    let groups = {}
+    for (let object of arr) {
+        let key = get_key(object)
+        if (!(key in groups))
+            groups[key] = []
+        groups[key].push(object)
+    }
+    return groups
 }

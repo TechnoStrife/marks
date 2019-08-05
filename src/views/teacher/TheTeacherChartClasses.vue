@@ -1,5 +1,5 @@
 <template>
-    <div id="subject-chart-teachers" class="row" v-if="all_years.length > 0">
+    <div id="teacher-chart-classes" class="row" v-if="all_years.length > 0">
         <div class="col s12">
             <ChartCardMulti
                 :data="avg_marks"
@@ -10,7 +10,7 @@
                 @chart-click="console.log(arguments)"
                 @export-chart="export_chart"
             >
-                <h6>Средняя оценка по учителю</h6>
+                <h6>Средняя оценка по классу</h6>
                 <span>Средняя средняя оценка = {{ total_avg[0] }}</span><br>
                 <span>Средняя средняя годовая оценка = {{ total_avg[1] }}</span><br>
                 <span>Среднее завышение оценки = {{ total_avg[2] }}</span><br>
@@ -35,7 +35,7 @@ import {avg, deep_copy, short_name, transpose_2d} from "@/utils"
 import {avg_marks_by_groups, default_options, distinct, round2, save_charts_to_excel_file} from "@/utils/marks"
 
 export default {
-    name: "TheSubjectChartTeachers",
+    name: "TheTeacherChartClasses",
     components: {
         ChartCardMulti,
         RangeSelect,
@@ -74,17 +74,19 @@ export default {
                 mark => mark.class.year === selected_year
             )
         },
-        filtered_teachers() {
-            return this.data.teachers.filter(teacher => !!this.filtered_marks.find(
-                mark => mark.teacher.id === teacher.id
-            ))
+        filtered_classes() {
+            let selected_year = this.selected_year
+            return this.data.classes.filter(
+                class_ => class_.year === selected_year
+                    && this.data.marks.find(mark => mark.class.id === class_.id) !== undefined
+            )
         },
         avg_marks() {
             let marks = this.filtered_marks
             let marks_grouped = avg_marks_by_groups(
                 marks,
-                mark => mark.teacher.id,
-                this.filtered_teachers.map(teacher => teacher.id),
+                mark => mark.class.id,
+                this.filtered_classes.map(class_ => class_.id),
                 [
                     mark => mark.mark,
                     mark => mark.terminal_mark,
@@ -92,9 +94,9 @@ export default {
                 ]
             )
             return Object.entries(marks_grouped).map(
-                ([teacher_id, [mark, terminal_mark, diff]]) => ({
-                    key: teacher_id,
-                    label: short_name(this.data.teachers_map[teacher_id].full_name),
+                ([class_id, [mark, terminal_mark, diff]]) => ({
+                    key: class_id,
+                    label: this.data.classes_map[class_id].name,
                     datasets: [
                         round2(mark || 0),
                         round2(terminal_mark || 0),
@@ -108,7 +110,7 @@ export default {
             let datasets = transpose_2d(this.avg_marks.map(x => x.datasets).map(
                 x => [x[0], x[1], x[2] - x[3]]
             ))
-            datasets = datasets.filter(x => x !== 0)
+            // datasets = datasets.filter(x => x !== 0)
             return datasets.map(x => round2(avg(x)))
         },
     },
@@ -122,7 +124,7 @@ export default {
             }
             this.selected_year_index = selected_year_index
             save_charts_to_excel_file(
-                `Успеваемость по ${this.data.name} по учителям`,
+                `Успеваемость у ${short_name(this.data.full_name)} по классам`,
                 this.labels,
                 charts_data
             )
@@ -132,7 +134,7 @@ export default {
 </script>
 
 <style lang="scss">
-#subject-chart-teachers {
+#teacher-chart-classes {
 
 }
 </style>

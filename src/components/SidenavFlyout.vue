@@ -11,6 +11,7 @@
                 <scrolly-bar axis="y"></scrolly-bar>
             </scrolly>-->
             <h5>{{ title }}</h5>
+            <router-link :to="summary.link" v-if="summary">{{ summary.text }}</router-link>
             <ul class="collapsible" ref="collapsible">
                 <li v-for="group in contents">
                     <div class="collapsible-header waves-effect waves-light">
@@ -41,11 +42,17 @@ export default {
         icon: String,
         title: String,
         contents: Array,
+        summary: {
+            type: Object,
+            required: false,
+            validator: summary => typeof summary.text === 'string'
+                && typeof summary.link === 'string'
+        },
         active: Boolean,
     },
     data() {
         return {
-            collapsible: null
+            // collapsible: null
         }
     },
     mounted() {
@@ -56,7 +63,11 @@ export default {
     watch: {
         active(val) {
             if (val === false) {
-                this.collapsible.close()
+                this.collapsible.close(
+                    Array.from(this.collapsible.el.children).findIndex(
+                        x => x.classList.contains('active')
+                    ) // thanks materialize
+                )
             }
         }
     },
@@ -67,7 +78,6 @@ export default {
 @import "~src/variables.scss";
 
 .sidenav-flyout {
-    color: $sidenav-flyout-text-color;
     position: fixed;
     overflow-x: hidden;
     overflow-y: scroll;
@@ -77,6 +87,11 @@ export default {
     transition: width 200ms ease-in-out;
     height: 100vh;
     background-color: $sidenav-flyout-bg-color;
+
+    color: $sidenav-flyout-text-color;
+    a {
+        color: $sidenav-flyout-text-color;
+    }
 
     -ms-overflow-style: none; // IE 10+
     scrollbar-width: none; // Firefox
@@ -94,6 +109,15 @@ export default {
 
     > * {
         width: $sidenav-flyout-width;
+    }
+
+    > a {
+        display: block;
+        padding: 0 16px;
+        &:hover {
+            transition: background-color .3s ease-out;
+            background-color: rgba(0, 0, 0, 0.05);
+        }
     }
 
     li {

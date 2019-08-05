@@ -1,8 +1,8 @@
 <template>
-    <div id="subject-chart-teachers" class="row" v-if="all_years.length > 0">
+    <div class="subjects-summary-chart row" v-if="all_years.length > 0">
         <div class="col s12">
             <ChartCardMulti
-                :data="avg_marks"
+                :data="chart_data"
                 :options="options"
                 :label="labels"
                 :draw_avg="false"
@@ -10,7 +10,7 @@
                 @chart-click="console.log(arguments)"
                 @export-chart="export_chart"
             >
-                <h6>Средняя оценка по учителю</h6>
+                <h6>{{ group_name }}</h6>
                 <span>Средняя средняя оценка = {{ total_avg[0] }}</span><br>
                 <span>Средняя средняя годовая оценка = {{ total_avg[1] }}</span><br>
                 <span>Среднее завышение оценки = {{ total_avg[2] }}</span><br>
@@ -31,24 +31,31 @@
 <script>
 import ChartCardMulti from "@/charts/ChartCardMulti"
 import RangeSelect from "@/components/RangeSelect"
-import {avg, deep_copy, short_name, transpose_2d} from "@/utils"
-import {avg_marks_by_groups, default_options, distinct, round2, save_charts_to_excel_file} from "@/utils/marks"
+import {avg, deep_copy, transpose_2d} from "@/utils"
+import {default_options, distinct, round2, save_charts_to_excel_file} from "@/utils/marks"
 
 export default {
-    name: "TheSubjectChartTeachers",
+    name: "SubjectsSummaryChart",
     components: {
         ChartCardMulti,
         RangeSelect,
     },
     props: {
         data: {
-            type: Object,
+            type: Array,
+            required: true,
+        },
+        group_name: {
+            type: String,
             required: true,
         }
     },
     data() {
         return {
-            options: deep_copy(default_options),
+            options: {
+                aspectRatio: 2,
+                ...deep_copy(default_options)
+            },
             selected_year_index: 0,
             console,
             labels: [
@@ -61,54 +68,35 @@ export default {
     },
     computed: {
         all_years() {
-            return distinct(this.data.classes.map(class_ => class_.year)).reverse().filter(
-                year => this.data.marks.find(mark => mark.class.year === year) !== undefined
-            )
+            return distinct(this.data.map(subject => subject.year)).reverse()
         },
         selected_year() {
             return this.all_years[this.selected_year_index]
         },
-        filtered_marks() {
+        filtered_subjects() {
             let selected_year = this.selected_year
-            return this.data.marks.filter(
-                mark => mark.class.year === selected_year
+            return this.data.filter(
+                x => x.year === selected_year
             )
         },
-        filtered_teachers() {
-            return this.data.teachers.filter(teacher => !!this.filtered_marks.find(
-                mark => mark.teacher.id === teacher.id
-            ))
-        },
-        avg_marks() {
-            let marks = this.filtered_marks
-            let marks_grouped = avg_marks_by_groups(
-                marks,
-                mark => mark.teacher.id,
-                this.filtered_teachers.map(teacher => teacher.id),
-                [
-                    mark => mark.mark,
-                    mark => mark.terminal_mark,
-                    mark => mark.mark && mark.terminal_mark && mark.terminal_mark - mark.mark
-                ]
-            )
-            return Object.entries(marks_grouped).map(
-                ([teacher_id, [mark, terminal_mark, diff]]) => ({
-                    key: teacher_id,
-                    label: short_name(this.data.teachers_map[teacher_id].full_name),
+        chart_data() {
+            return this.filtered_subjects.map(
+                subject_marks => ({
+                    key: subject_marks.subject.id,
+                    label: subject_marks.subject.name,
                     datasets: [
-                        round2(mark || 0),
-                        round2(terminal_mark || 0),
-                        Math.max(round2(diff || 0), 0),
-                        -Math.min(round2(diff || 0), 0),
+                        round2(subject_marks.mark || 0),
+                        round2(subject_marks.terminal_mark || 0),
+                        Math.max(round2(subject_marks.diff || 0), 0),
+                        -Math.min(round2(subject_marks.diff || 0), 0),
                     ],
                 })
             )
         },
         total_avg() {
-            let datasets = transpose_2d(this.avg_marks.map(x => x.datasets).map(
+            let datasets = transpose_2d(this.chart_data.map(x => x.datasets).map(
                 x => [x[0], x[1], x[2] - x[3]]
             ))
-            datasets = datasets.filter(x => x !== 0)
             return datasets.map(x => round2(avg(x)))
         },
     },
@@ -122,7 +110,7 @@ export default {
             }
             this.selected_year_index = selected_year_index
             save_charts_to_excel_file(
-                `Успеваемость по ${this.data.name} по учителям`,
+                `Успеваемость по ${this.data.name} по классам`,
                 this.labels,
                 charts_data
             )
@@ -132,7 +120,7 @@ export default {
 </script>
 
 <style lang="scss">
-#subject-chart-teachers {
+.subjects-summary-chart {
 
 }
 </style>
