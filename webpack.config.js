@@ -9,7 +9,12 @@ const {CleanWebpackPlugin} = require('clean-webpack-plugin')
 // const vue_style_loader = process.env.NODE_ENV !== 'production'
 //     ? 'vue-style-loader'
 //     : MiniCssExtractPlugin.loader;
-const vue_style_loader = MiniCssExtractPlugin.loader
+const vue_style_loader = {
+    loader: MiniCssExtractPlugin.loader,
+    options: {
+        publicPath: ''
+    }
+}
 
 const css_loader = {
     loader: 'css-loader',
@@ -24,7 +29,7 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, './dist'),
         filename: 'bundle.js',
-        publicPath: '/static/'
+        publicPath: 'static/'
     },
     plugins: [
         new VueLoaderPlugin(),

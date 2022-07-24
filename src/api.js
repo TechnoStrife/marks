@@ -32,7 +32,7 @@ export function transform_value(key, value) {
 
 function transform_response(data, headers) {
     try {
-        if (headers['content-type'] === 'application/json')
+        if (headers['content-type'].startsWith('application/json'))
             return LosslessJSON.parse(data, transform_value)
         else
             return data
@@ -55,12 +55,12 @@ export class Api {
         this.loading = true
         this.error = false
         this.wrong = false
-        if (url.length > 0 && url[url.length - 1] !== '/')
-            url += '/'
+        if (url.length > 0 && url[url.length - 1] === '/')
+            url = url.slice(0, -1)
         try {
             let res = await axios({
                 method: data ? 'post' : 'get',
-                url: '/api' + url,
+                url: '/marks/api' + url  + '.json',
                 params,
                 data,
                 transformResponse: transform_response
