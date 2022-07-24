@@ -32,10 +32,9 @@ export default {
             () => preloader_lock.unlock()
         )
         next(vm => {
+            api.transform_response = vm.api.transform_response
             if (api.res && api.res.data)
-                api.res.data = vm.api.transform_response(api.res.data)
-            else
-                api.transform_response = vm.api.transform_response
+                api.res.data = api.transform_response(api.res.data)
             vm.api = api
             preloader_lock.call(
                 () => vm.$emit('close-preloader')

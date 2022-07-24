@@ -1,9 +1,17 @@
 db.sqlite3
 desktop.ini
+deployment-host.json
+db_credentials.json
+.db_credentials.json
+.htaccess
+db.sql
+mysql.sql
+passwords.txt
 */migrations/
 .idea/
 venv/
 
+**/__pycache__/
 .DS_Store
 node_modules
 dist/

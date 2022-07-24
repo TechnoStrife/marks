@@ -5,8 +5,25 @@
             <a :href="user_link" target="_blank">Пользователь</a>
         </dd>
         <dd>
-            <a :href="person_link" target="_blank">Учитель</a>
+            <a :href="person_link" target="_blank" :disabled="!person_link" @click="dnevnik_link">Учитель</a>
+
+            <Modal small
+                   :opened="dnevnik_disabled_modal"
+                   v-if="!teacher.dnevnik_person_id"
+                   @close="dnevnik_disabled_modal=false">
+                Ссылки на dnevnik.ru в демо-версии недоступны
+                <div class="right-button">
+                    <button class="btn waves-effect center"
+                            @click="dnevnik_disabled_modal=false">
+                        ОК
+                    </button>
+                </div>
+            </Modal>
         </dd>
+        <!--<div class="data-invalid" v-if="!teacher.dnevnik_person_id">
+            <i class="material-icons">warning</i>
+            Все данные недействительны
+        </div>-->
 
         <template v-slot:after>
             <hr>
@@ -55,10 +72,12 @@ import {SCHOOL_ID} from "@/const"
 import PersonDescription from "@/components/PersonDescription"
 import {sorter_with_others_group} from "@/utils/marks"
 import {key_sorter} from "@/utils"
+import Modal from "@/components/Modal"
 
 export default {
     name: "TheTeacherDescription",
     components: {
+        Modal,
         OptionalText,
         StudentLink,
         ClassLink,
@@ -72,15 +91,21 @@ export default {
         }
     },
     data() {
-        return {}
+        return {
+            dnevnik_disabled_modal: false,
+        }
     },
     computed: {
         user_link() {
             return `https://dnevnik.ru/user/user.aspx?user=${this.teacher.dnevnik_id}`
         },
         person_link() {
-            return `https://schools.dnevnik.ru/admin/persons/person.aspx`
-                + `?person=${this.teacher.dnevnik_person_id}&school=${SCHOOL_ID}`
+            if (this.teacher.dnevnik_person_id)
+                return 'https://schools.dnevnik.ru/admin/persons/person.aspx'
+                    + `?person=${this.teacher.dnevnik_person_id}&school=${SCHOOL_ID}`
+            else
+                return 'https://schools.dnevnik.ru/admin/persons/person.aspx'
+                    + '?person=1600397763924&school=1000001567119'
         },
         subjects() {
             let subjects = {}
@@ -100,7 +125,14 @@ export default {
             return subjects
         },
     },
-    methods: {},
+    methods: {
+        dnevnik_link(event) {
+            if (this.teacher.dnevnik_person_id)
+                return
+            event.preventDefault()
+            this.dnevnik_disabled_modal = true
+        }
+    },
 }
 </script>
 

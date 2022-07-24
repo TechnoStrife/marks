@@ -1,7 +1,11 @@
+import django
 from django.contrib import admin
-from django.urls import include, path
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.urls import include, path, re_path
 from django.views.generic import RedirectView
+from django.contrib.staticfiles.views import serve as serve_static
 
+from marks import settings
 from frontend.views import test
 
 urlpatterns = [
@@ -10,7 +14,7 @@ urlpatterns = [
     path(r'api/', include('api.urls')),
     # path(r'', include('frontend.urls')),
     path(r'', test),
-    path(r'<path:url>', test),
+    re_path(r'^(?!static)(?P<url>.*)$', test),
 ]
 
 # handler404 = 'school_environ.views.handler404'

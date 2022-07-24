@@ -79,14 +79,16 @@ def request_page(session: Session, url, params=None, data=None):
             tries += 1
             continue
         if r.status_code == 200 and len(r.text) > 0:
-            break
+            return r
+        if r.status_code == 405:  # temporarily unavailable
+            time.sleep(60)
+            continue
         # if r.status_code >= 400:
         #     raise RuntimeError(f'status: {r.status_code}')
-        if tries >= 10:
+        if tries >= 50:
             raise RuntimeError
         time.sleep(tries)
         tries += 1
-    return r
 
 
 def skip_navigable_strings(soup):

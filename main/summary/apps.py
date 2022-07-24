@@ -2,4 +2,4 @@ from django.apps import AppConfig
 
 
 class SummaryConfig(AppConfig):
-    name = 'summary'
+    name = 'main.summary'

@@ -1,6 +1,8 @@
+import re
 from typing import Union, Iterable
 
 from django.db.models import *
+from django.db.models.functions import Lower
 
 from dnevnik.support import unique
 from main.base_models import MyModel as Model, PersonModel
@@ -23,7 +25,7 @@ __all__ = [
 class Period(Model):
     num = SmallIntegerField(verbose_name='Четверть')
     year = SmallIntegerField(verbose_name='Уч. год')
-    dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True)
+    dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True, null=True)
 
     def __str__(self):
         return '%s четверть %s года' % (self.num, str(self.year))
@@ -53,7 +55,7 @@ class Class(Model):
     head_teacher = ForeignKey(Teacher, on_delete=CASCADE, verbose_name='Классный руководитель',
                               null=True, related_name='head_in_classes')
     year = SmallIntegerField(verbose_name='Уч. год')
-    dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True)
+    dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True, null=True)
     periods_count = SmallIntegerField(verbose_name='Количество учебных периодов', null=True)
     final_class = ForeignKey('self', verbose_name='Конечный класс', on_delete=SET_NULL, null=True)
     periods = ManyToManyField(Period, db_table='class_periods',
@@ -93,15 +95,30 @@ class SubjectType(Model):
 class Subject(Model):
     name = CharField(max_length=127, verbose_name='Имя')
     type = CharField(max_length=100, verbose_name='Образовательная область')
-    dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True)
+    dnevnik_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True, null=True)
 
     def __str__(self):
         return self.name
 
     def update_type(self):
-        try:
-            self.type = SubjectType.objects.get(subject_name=self.name).type
-        except SubjectType.DoesNotExist:
+        if '(Э)' in self.name:
+            self.type = 'Элективы'
+            return
+
+        type = SubjectType.objects.filter(subject_name=self.name)
+        if not type.exists():
+            type = SubjectType.objects.filter(subject_name__icontains=self.name)
+        if '.' in self.name and not type.exists():
+            condition = Q()
+            for name in re.split('[. ]', self.name):
+                if name != '':
+                    condition &= Q(subject_name__contains=name.strip())
+            type = SubjectType.objects.filter(condition)
+
+        if type.exists():
+            type = max(type, key=lambda x: x.type != 'Прочее')
+            self.type = type.type
+        else:
             self.type = 'Неизвестно'
 
     class Meta:
@@ -114,8 +131,10 @@ class Student(PersonModel):
 
     klass = ForeignKey(Class, verbose_name='Класс', on_delete=CASCADE,
                        null=True, related_name='students')
-    previous_classes = ManyToManyField(Class, db_table='students_previous_classes',
-                                       verbose_name='Предыдущие классы', related_name='previous_students')
+    previous_classes = ManyToManyField(
+        Class, db_table='students_previous_classes',
+        verbose_name='Предыдущие классы', related_name='previous_students'
+    )
 
     entered = DateField(verbose_name='Дата начала обучения', null=True)
     leaved = DateField(verbose_name='Дата конца обучения', null=True)
@@ -123,7 +142,10 @@ class Student(PersonModel):
     parents = CharField(max_length=1024, verbose_name='Родители', null=True)
 
     def __str__(self):
-        return '%s (%s)' % (self.name, self.klass.name)
+        if self.klass is None:
+            return f'{self.name} (?)'
+        else:
+            return f'{self.name} ({self.klass.name})'
 
     def __repr__(self):
         return f'<Student {str(self)}>'

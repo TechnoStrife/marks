@@ -39,7 +39,7 @@ export default {
             for (let class_marks of this.data) {
                 res[class_level(class_marks.class)].push(class_marks)
             }
-            res = zip(['Начальная', 'Основная', 'Среднаяя'], res).map(
+            res = zip(['Начальная', 'Основная', 'Средняя'], res).map(
                 x => ({name: x[0], data: x[1]})
             )
             return res

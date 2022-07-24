@@ -1,7 +1,6 @@
 import Vue from 'vue'
 import Router from 'vue-router'
 import HomeView from './views/HomeView.vue'
-import TmpView from "@/views/TmpView"
 import ClassView from "@/views/class/ClassView"
 import StudentView from "@/views/student/StudentView"
 import SubjectView from "@/views/subject/SubjectView"
@@ -20,11 +19,6 @@ export default new Router({
             path: '/',
             name: 'home',
             component: HomeView
-        },
-        {
-            path: '/tmp',
-            name: 'tmp',
-            component: TmpView
         },
         {
             path: '/class/:id',

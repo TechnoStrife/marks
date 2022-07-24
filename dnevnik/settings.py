@@ -2,9 +2,9 @@
 import datetime
 from typing import List
 
-LOGIN = '***REMOVED***'
-PASSWORD = '***REMOVED***'
-SCHOOL_ID = ***REMOVED***
+LOGIN = 'some login'
+PASSWORD = 'expired anyway'
+SCHOOL_ID = 1000000000000
 
 CHROME_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) ' \
                     'Chrome/69.0.3497.100 Safari/537.36 '

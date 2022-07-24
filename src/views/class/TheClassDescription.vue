@@ -11,11 +11,31 @@
             </dd>
             <dt>dnevnik.ru:</dt>
             <dd>
-                <a :href="class_page" target="_blank">Класс</a>
+                <a :href="class_page" target="_blank" @click="dnevnik_link">
+                    Класс
+                </a>
             </dd>
             <dd>
-                <a :href="class_admin_page" target="_blank">Администрирование</a>
+                <a :href="class_admin_page" target="_blank" @click="dnevnik_link">
+                    Администрирование
+                </a>
             </dd>
+            <Modal small
+                   :opened="dnevnik_disabled_modal"
+                   v-if="!data.dnevnik_id"
+                   @close="dnevnik_disabled_modal=false">
+                Ссылки на dnevnik.ru в демо-версии недоступны
+                <div class="right-button">
+                    <button class="btn waves-effect center"
+                            @click="dnevnik_disabled_modal=false">
+                        ОК
+                    </button>
+                </div>
+            </Modal>
+            <!--<div class="data-invalid" v-if="!data.dnevnik_id">
+                <i class="material-icons">warning</i>
+                Все данные недействительны
+            </div>-->
         </dl>
         <div class="related-classes">
             <hr>
@@ -61,10 +81,12 @@ import ClassLink from "@/components/ClassLink"
 import TeacherLink from "@/components/TeacherLink"
 import {SCHOOL_ID} from "@/const"
 import NoteField from "@/components/NoteField"
+import Modal from "@/components/Modal"
 
 export default {
     name: "TheClassDescription",
     components: {
+        Modal,
         NoteField,
         OptionalText,
         StudentLink,
@@ -78,18 +100,34 @@ export default {
         }
     },
     data() {
-        return {}
+        return {
+            dnevnik_disabled_modal: false,
+        }
     },
     computed: {
         class_admin_page() {
-            return 'https://schools.dnevnik.ru/admin/class/class.aspx'
-                + `?class=${this.data.dnevnik_id}&school=${SCHOOL_ID}`
+            if (this.data.dnevnik_id)
+                return 'https://schools.dnevnik.ru/admin/class/class.aspx'
+                    + `?class=${this.data.dnevnik_id}&school=${SCHOOL_ID}`
+            else
+                return 'https://schools.dnevnik.ru/admin/class/class.aspx'
+                    + '?class=18456864&school=1000001567119'
         },
         class_page() {
-            return `https://schools.dnevnik.ru/class.aspx?class=${this.data.dnevnik_id}`
+            if (this.data.dnevnik_id)
+                return `https://schools.dnevnik.ru/class.aspx?class=${this.data.dnevnik_id}`
+            else
+                return 'https://schools.dnevnik.ru/class.aspx?class=18456864'
         },
     },
-    methods: {},
+    methods: {
+        dnevnik_link(event) {
+            if (this.data.dnevnik_id)
+                return
+            event.preventDefault()
+            this.dnevnik_disabled_modal = true
+        }
+    },
 }
 </script>
 

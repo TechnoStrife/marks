@@ -40,7 +40,7 @@ import ChartCardDoughnut from "@/charts/ChartCardDoughnut"
 
 
 const max_mark = 5
-const ignore_groups = ['Физическая культура', 'Технология', 'Прочее']
+const ignore_groups = ['Физическая культура', 'Технология', 'Прочее', 'Неизвестно']
 
 export default {
     name: "TheStudentChartAcademicPerformance",

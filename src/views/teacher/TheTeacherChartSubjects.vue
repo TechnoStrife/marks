@@ -10,7 +10,7 @@
                 @chart-click="console.log(arguments)"
                 @export-chart="export_chart"
             >
-                <h6>Средняя оценка по учителю</h6>
+                <h6>Средняя оценка по предмету</h6>
                 <span>Средняя средняя оценка = {{ total_avg[0] }}</span><br>
                 <span>Средняя средняя годовая оценка = {{ total_avg[1] }}</span><br>
                 <span>Среднее завышение оценки = {{ total_avg[2] }}</span><br>

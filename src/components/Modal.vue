@@ -1,7 +1,7 @@
 <template>
     <transition name="modal">
         <div id="modal" class="scroll hide-scroll-on-s row" v-if="opened" @click="close">
-            <div class="modal-content-wrapper col s12 m10 l8 push-m1 push-l2">
+            <div class="modal-content-wrapper col" :class="size">
                 <div class="card-panel" @mousedown="prevent = true" @mouseup="prevent = true">
                     <slot></slot>
                 </div>
@@ -11,7 +11,10 @@
 </template>
 
 <script>
-import ClickOutside from 'vue-click-outside'
+// import ClickOutside from 'vue-click-outside'
+// directives: {
+//     ClickOutside
+// },
 
 export default {
     name: "Modal",
@@ -19,24 +22,35 @@ export default {
         prop: 'opened',
         event: 'close'
     },
-    directives: {
-        ClickOutside
-    },
     components: {},
     props: {
         opened: {
             type: Boolean,
             required: false,
         },
+        small: {
+            type: Boolean,
+            default: false,
+        }
     },
     data() {
         return {
             prevent: false
         }
     },
-    computed: {},
+    computed: {
+        size() {
+            const classes = classes => Object.fromEntries(
+                classes.split(' ').map(x => [x, true])
+            )
+            if (this.small)
+                return classes('s10 push-s1 m6 push-m3 l4 push-l4')
+            else
+                return classes('s12 m10 push-m1 l8 push-l2')
+        }
+    },
     methods: {
-        close() {
+        close(event) {
             if (this.opened && !this.prevent)
                 this.$emit('close')
             this.prevent = false

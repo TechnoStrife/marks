@@ -47,9 +47,15 @@ class PersonModel(MyModel):
     dnevnik_id = BigIntegerField(verbose_name='ID пользователя в dnevnik.ru', unique=True, null=True)
     dnevnik_person_id = BigIntegerField(verbose_name='ID в dnevnik.ru', unique=True, null=True)
 
+    def name_split(self):
+        split = self.full_name.split()
+        if len(split) != 3:
+            split += ['?'] * (3 - len(split))
+        return split
+
     @property
     def name(self):
-        surname, name, patronymic = self.full_name.split()
+        surname, name, patronymic = self.name_split()
         name = f'{surname} {name[0]}. {patronymic[0]}.'
         return name
 
@@ -59,12 +65,12 @@ class PersonModel(MyModel):
 
     @property
     def first_name(self):
-        surname, name, patronymic = self.full_name.split()
+        surname, name, patronymic = self.name_split()
         return name
 
     @property
     def patronymic(self):
-        surname, name, patronymic = self.full_name.split()
+        surname, name, patronymic = self.name_split()
         return patronymic
 
     @property
@@ -73,7 +79,7 @@ class PersonModel(MyModel):
 
     @property
     def surname(self):
-        surname, name, patronymic = self.full_name.split()
+        surname, name, patronymic = self.name_split()
         return surname
 
     def check_name(self, check_name: str):

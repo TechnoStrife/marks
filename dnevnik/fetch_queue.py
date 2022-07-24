@@ -1,3 +1,4 @@
+import gc
 import time
 from queue import Queue, Empty
 from threading import Thread
@@ -7,6 +8,7 @@ import requests
 from requests import Session
 
 from dnevnik.pages.base_page import BasePage
+from sentry_sdk import configure_scope
 
 
 class PageFetcher(Thread):
@@ -17,15 +19,22 @@ class PageFetcher(Thread):
         PageFetcher.num += 1
         self.fetch_queue: 'FetchQueueProcessor' = fetch_queue
         self.fetching = False
+        self.error = False
 
     def run(self):
-        while self.fetch_queue.alive:
-            try:
-                page = self.fetch_queue.queue.get(timeout=0.1)
-            except Empty:
-                continue
+        with configure_scope() as scope:
+            scope.set_tag("fetching", "true")
+            while self.fetch_queue.alive:
+                try:
+                    page = self.fetch_queue.queue.get(timeout=0.1)
+                except Empty:
+                    continue
 
-            self._process(page)
+                try:
+                    self._process(page)
+                except Exception as e:
+                    self.error = True
+                    raise e
 
     def _process(self, page: BasePage):
         self.fetching = True
@@ -70,6 +79,9 @@ class FetchQueueProcessor:
         last_parsed = 0
         speed = 0
         while any(not page.parsed for page in pages):
+            if any(thread.error for thread in self.threads):
+                self.alive = False
+                raise RuntimeError('one thread errored')
             if time.time() - t >= 1:
                 t = time.time()
                 parsed = sum(page.parsed for page in pages)
@@ -100,9 +112,14 @@ class FetchQueueProcessor:
         while any(thread.is_alive() for thread in self.threads):
             time.sleep(0.05)
         self.threads = []
+        gc.collect()
+
+    def stop_async(self):
+        self.alive = False
+        self.threads = []
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.stop()
+        self.stop_async()
 
 
 def with_fetch_queue(func):

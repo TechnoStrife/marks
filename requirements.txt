@@ -1,11 +1,12 @@
-python-catcher
-django
+django==2.2.*
 django-webpack-loader
 django-background-tasks
 djangorestframework
 coreapi
 pyyaml
+mimesis
 
+sentry-sdk==0.13.2
 requests
 bs4
 lxml

@@ -1,3 +1,4 @@
+import datetime
 from itertools import zip_longest
 from typing import Dict, List
 
@@ -13,6 +14,8 @@ from dnevnik.pages import *
 from dnevnik.fetch_queue import FetchQueueProcessor
 from main.models import *
 from main.summary.models import AvgMark
+from background_task import background
+from background_task.models import Task
 
 
 def get_active_periods(fetch_queue: FetchQueueProcessor, classes: List[Class]) -> Dict[Class, Period]:
@@ -28,6 +31,7 @@ def get_active_periods(fetch_queue: FetchQueueProcessor, classes: List[Class]) -
 
 def initial_scan(fetch_queue: FetchQueueProcessor):
     print('subject types')
+    SubjectType.objects.all().delete()
     SubjectTypesPage().fetch(fetch_queue.session).parse(save=True)
 
     Teacher.objects.all().delete()
@@ -62,7 +66,7 @@ def initial_scan(fetch_queue: FetchQueueProcessor):
     summary.models.synchronize()
 
 
-def everyday_scan(fetch_queue: FetchQueueProcessor):
+def everyday_marks_scan(fetch_queue: FetchQueueProcessor):
     cur_year = current_year()
     classes = Class.objects.filter(year=cur_year)
     active_periods = get_active_periods(fetch_queue, classes)
@@ -77,14 +81,16 @@ def everyday_scan(fetch_queue: FetchQueueProcessor):
     fetch_queue.process(pages + summary_pages)
 
     print('save marks')
+    # if any(page.has_unsaved_students() for page in pages):
+    #     raise RuntimeError('unsaved student(s) detected')
     insert_marks = extract_and_save_marks(
         pages,
         Mark,
-        page_marks=lambda page: page.marks,
+        page_marks=lambda page: page.marks_with_student_models(),
         custom_filter=lambda marks, page: marks.filter(
             period=page.period,
-            is_semester=False,
-            is_terminal=False
+            # is_semester=False,
+            # is_terminal=False
         )
     )
     print()
@@ -172,15 +178,36 @@ def scan_students(fetch_queue: FetchQueueProcessor):
             student.update_or_create('dnevnik_person_id')
 
 
+@background(name='everyday_scan')
+def everyday_scan():
+    with timer('Total time', after=True):
+        session = login()
+        with FetchQueueProcessor(session) as fetch_queue:
+            scan_teachers(fetch_queue)
+            scan_students(fetch_queue)
+            everyday_marks_scan(fetch_queue)
+
+
 def main():
     with timer('Total time', after=True):
         session = login()
         with FetchQueueProcessor(session) as fetch_queue:
             # scan_teachers(fetch_queue)
             # scan_students(fetch_queue)
-            everyday_scan(fetch_queue)
+            # everyday_marks_scan(fetch_queue)
+            initial_scan(fetch_queue)
+
+
+# Add everyday_scan to task queue
+if not Task.objects.filter(task_name='everyday_scan').exists():
+    midnight = datetime.datetime.combine(
+        datetime.date.today(),
+        datetime.time(hour=3, minute=0, second=0)
+    )
+    midnight += datetime.timedelta(days=1)
+    everyday_scan(repeat=Task.DAILY, schedule=midnight)
 
 
 if __name__ == '__main__':
     # main()
-    summary.models.synchronize()
+    everyday_scan.now()

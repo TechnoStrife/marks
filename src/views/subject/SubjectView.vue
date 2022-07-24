@@ -45,6 +45,7 @@ export default {
                 mark.teacher = teachers[mark.teacher]
                 mark.class = classes[mark.class]
             }
+
             data.marks = marks
             // data.terminal_marks = terminal_marks
             data.classes_map = classes

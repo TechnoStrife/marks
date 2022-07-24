@@ -17,10 +17,12 @@
                            :active="flyout.active"
                            @open="open_flyout(index)"/>
             <li>
+                <!--
                 <router-link to="/tmp" class="waves-effect waves-teal">
                     <i class="material-icons">headset</i>
                     <span>Test</span>
                 </router-link>
+                -->
             </li>
         </ul>
     </header>

@@ -1,4 +1,4 @@
-export const SCHOOL_ID = ***REMOVED***
+export const SCHOOL_ID = 1000000000000
 
 export const chart_colors = {
     red: {border: 'rgb(255, 99, 132)', background: 'rgba(255, 99, 132, 0.5)'},

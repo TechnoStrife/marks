@@ -106,7 +106,7 @@ export default {
             let charts_data = new Map()
             for (let [index, name] of this.all_years.entries()) {
                 this.selected_year_index = index
-                charts_data['' + name] = this.avg_marks
+                charts_data['' + name] = this.chart_data
             }
             this.selected_year_index = selected_year_index
             save_charts_to_excel_file(

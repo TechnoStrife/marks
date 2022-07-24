@@ -1,11 +1,10 @@
-const path = require('path');
-const VueLoaderPlugin = require('vue-loader/lib/plugin');
-const BundleTracker = require('webpack-bundle-tracker');
-const WriteFilePlugin = require('write-file-webpack-plugin');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-// const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+const path = require('path')
+const VueLoaderPlugin = require('vue-loader/lib/plugin')
+const BundleTracker = require('webpack-bundle-tracker')
+const WriteFilePlugin = require('write-file-webpack-plugin')
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const TerserPlugin = require('terser-webpack-plugin')
-// const ForkTsCheckerWebpackPlugin = require('fork-ts-checker-webpack-plugin');
+const {CleanWebpackPlugin} = require('clean-webpack-plugin')
 
 // const vue_style_loader = process.env.NODE_ENV !== 'production'
 //     ? 'vue-style-loader'
@@ -17,7 +16,7 @@ const css_loader = {
     options: {
         url: true,
     }
-};
+}
 
 module.exports = {
     entry: './src/main.js',
@@ -30,11 +29,13 @@ module.exports = {
     plugins: [
         new VueLoaderPlugin(),
         // new BundleTracker({filename: 'webpack-stats.json'}),
+        new CleanWebpackPlugin({
+            verbose: process.env.NODE_ENV === 'production',
+        }),
         new WriteFilePlugin(),
         new MiniCssExtractPlugin({
             filename: 'style.css',
         }),
-        // new ForkTsCheckerWebpackPlugin(),
     ],
     resolve: {
         alias: {
@@ -60,13 +61,13 @@ module.exports = {
         open: false,
         overlay: true,
         proxy: {
-            '/api': 'http://localhost:8000'
+            '/api': 'http://127.0.0.1:8000'
         }
     },
     performance: {
         hints: false
     },
-    devtool: '#inline-source-map',
+    devtool: 'eval-source-map',
     module: {
         rules: [
             {
@@ -104,16 +105,6 @@ module.exports = {
                     'sass-loader?indentedSyntax'
                 ],
             },
-            /*{
-                test: /\.ts$/,
-                exclude: /node_modules/,
-                loader: 'ts-loader',
-                options: {
-                    transpileOnly: true,
-                    experimentalWatchApi: true,
-                    appendTsSuffixTo: [/\.vue$/]
-                }
-            },*/
             {
                 test: /\.vue$/,
                 loader: 'vue-loader',
@@ -137,47 +128,44 @@ module.exports = {
                 }
             },
             {
-                test: /\.(png|jpe?g|gif|webp|svg|woff2?|ttf)(\?.*)?$/,
+                test: /\.(png|jpe?g|gif|ico|webp|svg)(\?.*)?$/,
+                use: [
+                    // {
+                    //     loader: 'file-loader',
+                    //     options: {
+                    //         name: 'images/[name].[ext]',
+                    //     },
+                    // },
+                    {
+                        loader: 'url-loader',
+                        options: {
+                            limit: 1,
+                            name: 'images/[name].[ext]',
+                        },
+                    },
+                ]
+            },
+            {
+                test: /\.(woff2?|ttf)(\?.*)?$/,
                 use: [
                     {
                         loader: 'url-loader',
                         options: {
-                            limit: 4096,
-                            name: 'img/[name].[ext]'
-                        }
-                    }
+                            limit: 1,
+                            name: 'fonts/[name].[ext]',
+                        },
+                    },
                 ]
             },
         ]
     },
-};
+}
 
 if (process.env.NODE_ENV === 'production') {
-    module.exports.devtool = 'none';
+    module.exports.devtool = 'none'
     module.exports.optimization = {
         minimize: true,
         minimizer: [
-            // new UglifyJsPlugin({
-            //     parallel: true,
-            //     uglifyOptions: {
-            //         mangle: true,
-            //         output: {
-            //             comments: false
-            //         },
-            //         compress: {
-            //             sequences: true,
-            //             dead_code: true,
-            //             conditionals: true,
-            //             booleans: true,
-            //             unused: true,
-            //             if_return: true,
-            //             join_vars: true,
-            //             drop_console: true
-            //         },
-            //         ecma: 6,
-            //     },
-            //     sourceMap: true
-            // }),
             new TerserPlugin({
                 parallel: true,
                 sourceMap: true,

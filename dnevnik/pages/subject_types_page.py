@@ -4,7 +4,7 @@ from main.models import SubjectType
 
 
 class SubjectTypesPage(BasePage):
-    URL = 'https://schools.dnevnik.ru/admin/subjects/default.aspx?school=***REMOVED***'
+    URL = 'https://schools.dnevnik.ru/admin/subjects/default.aspx?school=1000000000000'
 
     def __init__(self):
         super().__init__()

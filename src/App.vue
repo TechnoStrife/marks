@@ -14,6 +14,7 @@ import ThePreloader from "@/components/ThePreloader"
 import TheSidenav from "@/components/TheSidenav"
 import router from "@/router"
 import {CallbackLock} from "@/utils/callback_lock"
+import "@/assets/favicon.ico"
 import "materialize-css/sass/materialize.scss"
 import "chart.js/dist/Chart.min.css"
 import 'katex/dist/katex.css'

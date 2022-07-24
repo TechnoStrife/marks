@@ -83,22 +83,39 @@ class SummaryPage(BasePage):
             self.no_teacher = True
             return
 
-        teacher_soup = teacher_soup.find(class_='u')
+        if teacher_soup.find(class_='u') is None:
+            teacher_name = teacher_soup.contents[-1].strip()
+            self.lesson.teacher = Teacher.objects.get_or_create(full_name=teacher_name)[0]
+            self.unknown_teacher = True
+            return
+
+        teacher_soups = teacher_soup.find_all(class_='u')
+        for teacher_soup in teacher_soups:
+            success, teacher = self.try_find_teacher(teacher_soup)
+            if success:
+                self.lesson.teacher = teacher
+                break
+        else:
+            self.unknown_teacher = True
+
+    def try_find_teacher(self, teacher_soup: Tag):
         teacher_name = teacher_soup.text
         dnevnik_id = int(get_query_params(teacher_soup['href'], 'user'))
-
         if self.lesson.teacher is not None and self.lesson.teacher.check_name(teacher_name):
-            return
+            return False, None
         check_name = self.lesson.teacher is None
         if Teacher.objects.filter(dnevnik_id=dnevnik_id).exists():
-            self.lesson.teacher = Teacher.objects.get(dnevnik_id=dnevnik_id)
+            teacher = Teacher.objects.get(dnevnik_id=dnevnik_id)
+        elif Teacher.objects.filter(full_name=teacher_name).exists():
+            teacher = Teacher.objects.get(full_name=teacher_name)
         else:
-            self.lesson.teacher = Teacher(full_name=teacher_name, dnevnik_id=dnevnik_id)
-            self.unknown_teacher = True
-            raise RuntimeError()
+            teacher = Teacher(full_name=teacher_name, dnevnik_id=dnevnik_id)
+            return False, teacher
 
         if check_name:
-            assert self.lesson.teacher.check_name(teacher_name)
+            if not teacher.check_name(teacher_name):
+                return False, None
+        return True, teacher
 
     def _parse_periods(self, table: Tag) -> List[Period]:
         row = exclude_navigable_strings(table.find('thead').find('tr'))
@@ -124,11 +141,14 @@ class SummaryPage(BasePage):
             row = exclude_navigable_strings(row)[1:]  # First td contains useless column number
             person_cell, *row = row
             dnevnik_person_id = int(get_query_params(person_cell.a['href'], 'student'))
+            name = ' '.join(person_cell.a.text.split())
             student = Student.objects.filter(dnevnik_person_id=dnevnik_person_id)
+            if not student.exists():
+                student = Student.objects.filter(full_name__contains=name)
+
             if student.exists():
                 student = student.first()
             else:
-                name = ' '.join(person_cell.a.text.split())
                 print('unknown student in SummaryPage', name, self.response.url)
                 continue
 

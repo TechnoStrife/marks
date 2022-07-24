@@ -63,11 +63,11 @@ export default {
     watch: {
         active(val) {
             if (val === false) {
-                this.collapsible.close(
-                    Array.from(this.collapsible.el.children).findIndex(
-                        x => x.classList.contains('active')
-                    ) // thanks materialize
-                )
+                // this.collapsible.close(
+                //     Array.from(this.collapsible.el.children).findIndex(
+                //         x => x.classList.contains('active')
+                //     ) // thanks materialize
+                // )
             }
         }
     },
