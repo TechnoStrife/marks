@@ -1,29 +1,32 @@
-# marks_js
+# [technostrife.github.io/marks/](https://technostrife.github.io/marks/)
 
-## Project setup
-```
-npm install
-```
+## Система анализа оценок и ежедневного получения данных с сайта dnevnik.ru
 
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
+В основные задачи системы входили:
+- Ежедневный парсинг данных с сайта электронного дневника dnevnik.ru
+и их занесение в базу данных, а также их обработка и агрегация
+- Представление этих данных руководству школы для дальнейшего анализа
 
-### Compiles and minifies for production
-```
-npm run build
-```
+Проект так и не был внедрен потому что руководство потеряло интерес / забыло и нем.
 
-### Run your tests
-```
-npm run test
-```
+*Примечание: меню не отображается на телефоне*
 
-### Lints and fixes files
-```
-npm run lint
-```
+Основные технологии:
+- Python
+  - Django
+  - Django REST framework
+  - requests & BeautifulSoup4
+- SQL
+- JS
+  - Vue
+  - Vue router
+  - Vuex
+  - axios
+  - chart.js
+  - webpack
+- SCSS
+- Front-end framework: Materialize
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+---
+
+Все данные на GitHub Pages анонимизированы
