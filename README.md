@@ -15,7 +15,7 @@
 - Python
   - Django
   - Django REST framework
-  - requests & BeautifulSoup4
+  - requests, BeautifulSoup4, многопоточность
 - SQL
 - JS
   - Vue
